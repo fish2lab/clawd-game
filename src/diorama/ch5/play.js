@@ -833,7 +833,7 @@
       if (test.pass) {
         snd('ok');
         hud.badge(a, '✓ TESTS PASS', 2.4);
-        if (!S.tested) { S.tested = true; hud.tick(1); }
+        if (!S.tested) { S.tested = true; hud.tick(0); hud.tick(1); }
         if (S.why) { await world.wait(1.6); startWhen(); }
       } else {
         snd('fail');
@@ -1042,12 +1042,19 @@
       const path = cratePath();
       if (!path) return;
       const o = A.opus, c = crate.mesh.position;
-      // round behind it, then roll it home a cell at a time
+      // roll it home a cell at a time: from behind, or pulling from the front where the wall is behind it
+      let last = null;
       for (let i = 1; i < path.length; i++) {
         const [x0, z0] = [c.x, c.z], [x1, z1] = path[i];
         const dx = x1 - x0, dz = z1 - z0;
+        if (last !== dx + ',' + dz) {
+          last = dx + ',' + dz;
+          crate.block.on = true;
+          const behind = [x0 - dx * 1.05, z0 - dz * 1.05], front = [x0 + dx * 1.05, z0 + dz * 1.05];
+          const spot = grid.freeAt(...behind) ? behind : front;
+          await o.walkTo(spot[0], spot[1]);
+        }
         crate.block.on = false;
-        if (i === 1) { await o.walkTo(x0 - dx * 1.05, z0 - dz * 1.05); }
         o.face(Math.atan2(dx, dz));
         const ox = o.x, oz = o.z;
         CL.Sound.play('whoosh');

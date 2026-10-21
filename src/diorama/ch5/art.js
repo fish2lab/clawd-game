@@ -456,7 +456,7 @@
       [-22, 0, 22].forEach((x, i) => {
         c.strokeRect(x - 8, -16, 16, 30);
         const s = state && state[i];
-        if (s === 'ice') { L2([[x - 6, -24], [x + 6, -32]]); L2([[x + 6, -24], [x - 6, -32]]); }
+        if (s === 'ice') { c.lineWidth = 3; for (let k = 0; k < 3; k++) { const an = k * PI / 3; L2([[x - Math.cos(an) * 8, -30 - Math.sin(an) * 8], [x + Math.cos(an) * 8, -30 + Math.sin(an) * 8]]); } c.lineWidth = 4; }
         else if (s === 'cut') { c.strokeStyle = P.ALARM; L2([[x - 8, -26], [x + 8, -20]]); c.strokeStyle = S; }
         else { c.fillRect(x - 2, -30, 4, 10); }
       });

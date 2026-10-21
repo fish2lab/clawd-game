@@ -263,6 +263,10 @@
     // ---------------------------------------------------- walk grid
     G.blockRect(POS.table[0] - 0.78, POS.table[1] - 0.5, POS.table[0] + 0.78, POS.table[1] + 0.5);
     G.blockRect(0, 6.95, 0.5, 9.7);          // the pieces leaning on the left wall
+    // the mouth of the alley beside the reactor: the room blocks the gap between the
+    // reactor face and the plinth right up to the wall; open it past the plinth's end
+    const [i0, j0] = G.cellOf(15.0, 3.4), [i1, j1] = G.cellOf(15.49, 3.84);
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) G.block[G.idx(i, j)] = 0;
     return L;
   }
 

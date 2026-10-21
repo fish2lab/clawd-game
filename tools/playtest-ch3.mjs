@@ -106,6 +106,8 @@ await drive('ch3', async ({ page, click, until, sleep, shot, portrait, settle, k
   await click(...pts.bracket, 'the empty bracket (Opus)');
   await until(() => window.__probe.state().signUp, 'sign up: PLEASE DO NOT TAP THE GLASS', 60000);
   await shot('sign');
+  await sleep(5000);
+  await shot('habit');
   await page.waitForSelector('#card:not([hidden])', { timeout: 60000 });
   const card = await page.evaluate(() => document.getElementById('card-label').textContent + ' ' + document.getElementById('card-title').textContent);
   console.log('ok   next card:', card);

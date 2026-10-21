@@ -335,8 +335,8 @@
     L.whistleTop = new T.Vector3(RISER_X, 4.1, VB.z);
     // flow gauge on the riser
     const fg = K.gauge(0.15);
-    fg.position.set(RISER_X, 2.88, VB.z + 0.16);
-    vg.add(K.pipe(RISER_X, 2.88, VB.z, RISER_X, 2.88, VB.z + 0.1, 0.03, P.NAVY));
+    fg.position.set(RISER_X, 1.64, VB.z + 0.16);
+    vg.add(K.pipe(RISER_X, 1.64, VB.z, RISER_X, 1.64, VB.z + 0.1, 0.03, P.NAVY));
     vg.add(fg);
     fg.userData.set(0.02);
     L.flowGauge = fg;

@@ -56,7 +56,16 @@
 
   const ICONS = {
     bell(c, s) { drawBell(c, s, 0.5, 0.52, 1.2); },
-    web(c, s) { drawBell(c, s, 0.42, 0.56, 1.0, true); },
+    bell0(c, s) { drawBell(c, s, 0.42, 0.56, 1.0, true); },
+    // a cobweb in a corner: never touched
+    web(c, s) {
+      c.lineWidth = s * 0.035;
+      const cx = 0.2 * s, cy = 0.2 * s;
+      for (let i = 0; i < 5; i++) { const a = i * PI / 8; c.beginPath(); c.moveTo(cx, cy); c.lineTo(cx + Math.cos(a) * 0.68 * s, cy + Math.sin(a) * 0.68 * s); c.stroke(); }
+      [0.18, 0.34, 0.5, 0.64].forEach(r => { c.beginPath(); for (let i = 0; i < 5; i++) { const a = i * PI / 8; const px = cx + Math.cos(a) * r * s, py = cy + Math.sin(a) * r * s; if (i) c.lineTo(px, py); else c.moveTo(px, py); } c.stroke(); });
+      c.fillStyle = P.INK; c.beginPath(); c.arc(0.58 * s, 0.62 * s, 0.06 * s, 0, 7); c.fill();
+      c.beginPath(); c.moveTo(0.58 * s, 0.56 * s); c.lineTo(0.5 * s, 0.42 * s); c.stroke();
+    },
     valve(c, s) { drawValve(c, s, 0.5, 0.5, 0.28); },
     shake(c, s) {
       drawValve(c, s, 0.5, 0.5, 0.22);

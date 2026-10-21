@@ -246,7 +246,7 @@
       const z0 = faceBase.z;
       await tw(hard ? 0.18 : 0.3, u => faceZ(z0 + 0.36 * u * u));
       play(hard ? 'ram' : 'thud');
-      world.rig.shake = hard ? 0.16 : 0.05;
+      world.rig.shake = hard ? 0.1 : 0.05;
       L.vib.root.position.z += 0.03;
       fire('G', 'spike', hard ? 1 : 0.8);
       if (S.clip === 'stem') { fire('C', 'spike', 0.45); jiggleClip(0.3); }
@@ -344,6 +344,7 @@
       const n = first ? 3 : 2;
       for (let i = 0; i < n; i++) {
         await actRam(true);
+        world.rig.shake = 0.16 + 0.04 * i;
         if (first && i === n - 1) { drawCrack(0.5); play('shatter'); world.rig.shake = 0.25; }
         await wait(0.25);
       }
@@ -558,20 +559,22 @@
         });
       }
     }
+    const lapMat0 = A.sonnet.model.prop.material;
+    const lapMat1 = K.m(P.SCREEN, { flat: true, emissive: AR.hex(P.SCREEN, 0.3) });
     function openLaptop(mode) {
       S.laptop = mode;
       if (mode === 'console') { S.readConsole = true; hud.tick(0); }
       if (mode === 'reactor') S.readReactor = true;
       lap.style.display = 'block';
       play('click');
-      A.sonnet.model.prop.material = K.m(P.SCREEN, { flat: true, emissive: AR.hex(P.SCREEN, 0.3) });
+      A.sonnet.model.prop.material = lapMat1;
       lapCable(true);
     }
     function closeLaptop() {
       if (!S.laptop) return;
       S.laptop = null;
       lap.style.display = 'none';
-      A.sonnet.model.prop.material = K.m('#B9BEC6');
+      A.sonnet.model.prop.material = lapMat0;
       lapCable(false);
     }
     let lapWire = null, lapPort = null;
@@ -638,7 +641,12 @@
         onClick: () => {
           const at = S.plugAt[p.test];
           if (at === 'jack') { const j = S.wiring[p.test]; world.interact({ spot: () => [L.jacks[j - 1].at.x, FRONT + 0.6, PI], use: a => useJack(a, j) }); return; }
-          if (at !== 'dangle') { if (A[at] !== world.active) say('q'); return; }
+          if (at !== 'dangle') {
+            // your own plug: let go of it (it hangs under its socket); someone else's: no
+            if (A[at] !== world.active) { say('q'); return; }
+            release(A[at]); S.plugAt[p.test] = 'dangle'; placePlug(p.test); play('dull'); checkFixes();
+            return;
+          }
           world.interact({
             spot: () => [L.sockets[p.i].x, FRONT + 0.6, PI],
             use: async a => {
@@ -766,7 +774,12 @@
     world.addPick(clip.root, {
       kind: 'clip',
       onClick: () => {
-        if (S.clip === 'held') { if (holderOf(clip.root) !== world.active) say('q'); return; }
+        if (S.clip === 'held') {
+          const h = holderOf(clip.root);
+          if (h !== world.active) { say('q'); return; }
+          release(h); S.clipHolder = null; placeClip('dangle'); play('dull');
+          return;
+        }
         world.interact({ spot: clipSpot, use: takeClip });
       },
     });
@@ -800,7 +813,7 @@
     look(L.bin, 'bin', 'pellet');
     look(L.spill, 'pellets', 'pellet');
     look(L.vib.root, 'sensor', 'glass');
-    look(L.mic.root, 'sensor', () => (S.everRang ? 'bell' : 'web'));
+    look(L.mic.root, 'sensor', () => (S.everRang ? 'bell' : 'bell0'));
     look(L.flowGauge, 'gauge', 'eye');
     look(L.whistle, 'whistle', () => (S.everOpened ? 'steam' : 'web'));
     R.gauges.forEach(g => look(g, 'gauge', 'eye'));
@@ -836,6 +849,8 @@
     });
 
     // ================================================================ the reveal and the sign
+    // a scripted beat takes a Clawd over: whatever it was doing (or walking to) is dropped
+    function takeOver(a) { a.cmd++; a.next = null; a.stop(); a.busy = false; }
     async function reveal() {
       S.revealed = true;
       hud.untick(2);
@@ -844,6 +859,7 @@
       world.locked = true;
       paused = true;
       const sn = A.sonnet;
+      takeOver(sn);
       // Sonnet comes to say well done, the way everyone does
       if (perched(sn)) await M.dismount(sn, sn.x + 0.8, sn.z + 0.6);
       closeLaptop();
@@ -903,6 +919,10 @@
     async function mountSign(a) {
       world.locked = true;
       paused = true;
+      takeOver(A.sonnet);
+      if (a.carrying) await M.dismount(a.carrying, a.x - 0.9, a.z + 0.4);
+      // step aside, set the ladder up in front of the bracket, climb it
+      await a.hopTo(SIGN_AT.x + 0.75, 4.12, 0.56, 0.3);
       const ld = L.ladder.root;
       ld.removeFromParent();
       scene.add(ld);
@@ -925,6 +945,7 @@
       for (let i = 0; i < 4; i++) { play('screw'); await tw(0.35, u => { a.armR = 1.2 + 0.3 * Math.sin(u * PI * 4); }); }
       a.armR = a.armL = 0;
       S.signUp = true;
+      hud.untick(3);
       hud.tick(3);
       await wait(0.4);
       await a.hopTo(SIGN_AT.x + 0.8, 4.12, 0.56, 0.5);
@@ -958,11 +979,11 @@
       lap.remove();
       api.finish();
     }
-    function tapRingInside() {
+    function tapRingInside(dur) {
       const ring = K.mesh(new T.TorusGeometry(0.22, 0.014, 6, 28), CL.Ink.ink(P.GLOW, { flat: true, lit: true, opacity: 0.99 }), RX + 0.4, PCY - 0.2, DP + 0.02);
       ring.layers.set(1);
       scene.add(ring);
-      world.tween(0.8, u => { ring.scale.setScalar(1 + 2.5 * u); ring.material.uniforms.uOpacity.value = 1 - u; }, () => scene.remove(ring));
+      world.tween(dur || 0.8, u => { ring.scale.setScalar(1 + 2.5 * u); ring.material.uniforms.uOpacity.value = 1 - u; }, () => scene.remove(ring));
     }
 
     // ================================================================ per frame
@@ -1175,6 +1196,28 @@
           A.sonnet.place(L.dataCAt.x, FRONT + 0.6, 0, PI);
           world.rig.target.set(11.0, 4.6, 4.6);
           world.rig.zoom = world.rig.zoomT = 12;
+        } else if (name === 'end') {
+          // the last beat: the sign is up; Sonnet's claw goes to the glass out of habit
+          setWiring({ bell: 3, valve: 2, glass: 1 });
+          drawCrack(0.5);
+          placeClip('down');
+          S.score = 14;
+          showScore();
+          R.sign.visible = true;
+          const ld = L.ladder.root;
+          ld.removeFromParent(); scene.add(ld);
+          ld.rotation.set(0, 0, 0); ld.position.set(SIGN_AT.x, 0.56, 3.98);
+          L.ladder.open(1);
+          L.bell.web.visible = L.wheel.web.visible = false;
+          A.opus.place(SIGN_AT.x + 0.8, 4.12, 0.56, PI - 0.4);
+          A.sonnet.place(RX - 0.9, 4.12, 0.56, PI);
+          A.sonnet.armR = 1.4;
+          world.bubble(A.sonnet, 'sign', 99);
+          tapRingInside(3);
+          hud.tick(0); hud.untick(1); hud.tick(1); hud.untick(2); hud.tick(2);
+          glowEyes(P.GLOW, 99);
+          world.rig.target.set(RX + 0.9, 2.5, 4.4);
+          world.rig.zoom = world.rig.zoomT = 8;
         } else if (name === 'sign') {
           setWiring({ bell: 3, valve: 2, glass: 1 });
           drawCrack(0.5);

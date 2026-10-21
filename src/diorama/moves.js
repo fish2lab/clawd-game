@@ -15,6 +15,43 @@
   const PI = Math.PI;
   const play = n => CL.Sound.play(n);
 
+  // The marker for a box move, in the box's direction of travel (local -z): the target
+  // footprint on the floor, and a big arrow on the box's own top face (always in view
+  // from above); a red cross on the box instead when it can't move that way.
+  function boxHint(size) {
+    const P = CL.P;
+    const g = new T.Group();
+    const ok = CL.Ink.ink(P.SAFETY, { flat: true, lit: true, opacity: 0.95, depthWrite: false });
+    const okFill = CL.Ink.ink(P.SAFETY, { flat: true, lit: true, opacity: 0.3, depthWrite: false });
+    const no = CL.Ink.ink(P.ALARM, { flat: true, lit: true, opacity: 0.95, depthWrite: false });
+    const dark = CL.Ink.ink(P.INK, { flat: true, lit: true, opacity: 0.85, depthWrite: false });
+    const flat = (geo, mat, x, y, z, rz) => {
+      const m = new T.Mesh(geo, mat);
+      m.rotation.set(-PI / 2, 0, rz || 0);
+      m.position.set(x, y, z);
+      g.add(m);
+      return m;
+    };
+    const h = size / 2, w = 0.07;
+    const foot = [
+      flat(new T.PlaneGeometry(size, size), okFill, 0, 0, 0),
+      ...[[0, -h, size, w], [0, h, size, w], [-h, 0, w, size], [h, 0, w, size]].map(([x, z, sx, sz]) => flat(new T.PlaneGeometry(sx, sz), ok, x, 0.001, z)),
+    ];
+    const tri = new T.Shape([new T.Vector2(0, 0.3), new T.Vector2(-0.24, -0.04), new T.Vector2(-0.09, -0.04), new T.Vector2(-0.09, -0.3), new T.Vector2(0.09, -0.3), new T.Vector2(0.09, -0.04), new T.Vector2(0.24, -0.04)]);
+    const top = size - 0.012 + 0.006;   // the group sits just above the floor
+    const arrow = flat(new T.ShapeGeometry(tri), dark, 0, top, 1);   // drawn pointing +y: lies along -z
+    const cross = { children: [PI / 4, -PI / 4].map(r => flat(new T.PlaneGeometry(0.6, 0.12), no, 0, top, 1, r)) };
+    g.traverse(o => o.layers.set(1));   // no ink outline for markings
+    g.visible = false;
+    // can: the box can move; then the footprint shows where it ends up
+    g.userData.show = can => {
+      foot.forEach(m => { m.visible = can; });
+      arrow.visible = can;
+      cross.children.forEach(m => { m.visible = !can; });
+    };
+    return g;
+  }
+
   // opt.locked(a): called when a Clawd that is not free yet is clicked; show why
   function setup(world, A, opt) {
     opt = opt || {};
@@ -225,13 +262,31 @@
       };
       // seat a Clawd on top without animation (for posed stills)
       bx.seat = a => { a.place(mesh.position.x, mesh.position.z, size, a.heading); a.support = { kind: 'crate', crate: bx }; bx.rider = a; };
-      world.addPick(mesh, {
+      const info = world.addPick(mesh, {
         kind: 'crate',
         onClick: (hit, a) => {
+          hint.visible = false;
           if (!a) return;
           if (hit.normal.y > 0.6) bx.climb(a);
           else bx.push(a, hit.normal);
         },
+      });
+      // Hovering a side with Opus shows where the box would go: its footprint on the
+      // floor and an arrow (push away, or pull back), or a red cross if it can't move.
+      const hint = boxHint(size);
+      world.scene.add(hint);
+      world.on('move', hit => {
+        const a = world.active;
+        hint.visible = false;
+        if (!hit || hit.info !== info || hit.normal.y > 0.6 || !a || bx.rider || a.busy === true) return;
+        let { dir, k } = bx.plan(a, hit.normal);
+        if (!a.spec.heavy) k = 0;   // only Opus is heavy enough to move it
+        const p = mesh.position;
+        const s = k || 1;
+        hint.position.set(p.x + dir[0] * s, 0.012, p.z + dir[1] * s);
+        hint.rotation.y = Math.atan2(-dir[0] * s, -dir[1] * s);
+        hint.userData.show(!!k);
+        hint.visible = true;
       });
       return bx;
     }

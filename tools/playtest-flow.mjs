@@ -17,7 +17,7 @@ await drive('ch5', async ({ page, click, until }) => {
   await click(11.2, 3.35, 3.46, 'the porthole');
   await until(() => window.__probe.chapter() === 'epilogue', 'ch5 handed over to the epilogue', 60000);
   await page.waitForTimeout(1500);
-  await click(11.2, 3.35, 3.46, 'the porthole');
+  await page.evaluate(() => window.__probe.finish());   // the epilogue itself is played in playtest-epilogue.mjs
   await page.waitForSelector('#again:not([hidden])', { timeout: 20000 });
   console.log('ok   final card:', JSON.stringify(await card(page)));
 });

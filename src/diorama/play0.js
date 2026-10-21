@@ -340,6 +340,8 @@
       },
     });
     world.addPick(R.sign, { kind: 'sign', onClick: () => world.interact({ spot: () => [LV.RX + 2.88, 4.4, PI], use: async a => world.bubble(a, 'bang') }) });
+    // the stacking placard under it: the Clawd that reads it thinks of a stack
+    world.addPick(L.hanoi, { kind: 'sign', onClick: () => world.interact({ spot: () => [LV.RX + 2.88, 4.4, PI], use: async a => world.bubble(a, 'stack', 2.2) }) });
     R.gauges.forEach(gg => world.addPick(gg, { kind: 'gauge', onClick: () => world.bubble(world.active, 'eye') }));
     world.addPick(L.clutter, { kind: 'clutter', onClick: () => world.bubble(world.active, 'heavy') });
     world.addPick(L.exit, { kind: 'exit', onClick: () => world.interact({ spot: () => [15.2, 6.6, PI / 2], use: async a => { play('dull'); world.bubble(a, 'lock'); } }) });

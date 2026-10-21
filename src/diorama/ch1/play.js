@@ -639,9 +639,9 @@
     // where the pointer is in the room: whatever it is over, else the floor under it
     let ptr = null;
     const ground = new T.Plane(new T.Vector3(0, 1, 0), 0);
+    // where the pointer is, on the floor plane: smooth as the pointer moves, so the eyes'
+    // lead (its velocity) never jumps when the pick flips between an object and the floor
     function pointAt(p) {
-      const h = world.pick(p);
-      if (h) return h.point.clone();
       world.ray.setFromCamera(new T.Vector2(p[0] / world.w * 2 - 1, -(p[1] / world.h) * 2 + 1), world.cam);
       return world.ray.ray.intersectPlane(ground, new T.Vector3());
     }

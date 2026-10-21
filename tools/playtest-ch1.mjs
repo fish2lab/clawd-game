@@ -190,6 +190,9 @@ await drive('ch1', async ({ page, click, until, sleep, shot, portrait: pick, set
     let e, d = 99;
     for (let i = 0; i < 12 && d > 1.5; i++) {
       await sleep(500);
+      // the camera can still drift under the pointer: keep the pointer on the same spot of floor
+      const [qx, qy] = await page.evaluate(([x, z]) => window.__probe.screen(x, 0, z), [x, z]);
+      await page.mouse.move(qx + (i % 2), qy);
       e = await page.evaluate(() => window.__probe.eyes());
       d = Math.hypot(e.target[0] - x, e.target[2] - z);
     }
@@ -199,8 +202,9 @@ await drive('ch1', async ({ page, click, until, sleep, shot, portrait: pick, set
   await portrait(1);
   await hoverAt(13.5, 7.0);
   await click(13.5, 0, 7.0, 'walk Opus where the eyes already look');
-  await hoverAt(9.5, 7.8);
-  await click(9.5, 0, 7.8, 'walk Opus again');
+  // (z 7.8 falls off the bottom of the screen once the camera has followed Opus right)
+  await hoverAt(9.5, 6.0);
+  await click(9.5, 0, 6.0, 'walk Opus again');
   await until(() => window.__probe.state().ended, 'it looks back at you', 60000);
   await page.waitForSelector('#card:not([hidden])', { timeout: 30000 });
   console.log('ok   chapter 2 card');

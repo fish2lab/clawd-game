@@ -50,7 +50,7 @@ await drive('prologue', async ({ page, click, until, sleep, shot, portrait, sett
   await click(1.3, 0.9, 6.0, 'crate top');
   await until(() => window.__probe.actor('opus').support === 'crate', 'Opus on the crate');
   await portrait(2);
-  await click(1.3, 1.74, 6.0, 'Opus head');
+  await click(1.3, 1.7, 6.0, 'Opus head');
   await until(() => window.__probe.actor('sonnet').support === 'actor', 'Sonnet on Opus');
   await shot('stack-locker');
   await click(0.35, 2.25, 5.85, 'wheel on the locker');
@@ -70,12 +70,12 @@ await drive('prologue', async ({ page, click, until, sleep, shot, portrait, sett
   await click(RX, 0.57, 4.12, 'plinth (Opus)');
   await until(() => { const a = window.__probe.actor('opus'); return Math.abs(a.x - 11.2) < 0.2 && a.y > 0.5 && !a.busy; }, 'Opus on the plinth');
   await portrait(2);
-  await click(RX, 0.56 + 0.83, 4.1, 'Opus head');
+  await click(RX, 0.56 + 0.8, 4.1, 'Opus head');
   await until(() => window.__probe.actor('sonnet').support === 'actor' && !window.__probe.actor('sonnet').busy, 'Sonnet on Opus');
   await portrait(3);
   await click(RX + 1.4, 0.57, 4.12, 'plinth (Haiku)');
   await until(() => { const a = window.__probe.actor('haiku'); return a.y > 0.5 && !a.busy; }, 'Haiku on the plinth');
-  await click(RX, 0.56 + 0.83 + 0.65, 4.1, 'Sonnet head');
+  await click(RX, 0.56 + 0.83 + 0.62, 4.1, 'Sonnet head');
   await until(() => window.__probe.actor('haiku').support === 'actor' && !window.__probe.actor('haiku').busy, 'Haiku on top');
   await shot('stack');
   await click(RX - 0.3, 2.95, 3.46, 'the glass');

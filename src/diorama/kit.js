@@ -62,20 +62,25 @@
     rig.add(body);
     // coat / hoodie / blazer hem hanging below the body
     const hemCol = { labcoat: P.COAT, hoodie: P.HOODIE_DARK, uniform: P.BLAZER }[st.outfit];
-    if (hemCol) rig.add(box(W + 0.06 * W, 0.08 * W, D + 0.06 * W, hemCol, 0, LEG - 0.035 * W, 0));
+    if (hemCol) rig.add(box(W + 0.06 * W, 0.08 * W, D + 0.06 * W, hemCol, 0, LEG + 0.045 * W, 0));
     const eyes = [-1, 1].map(s => {
       const e = box(0.0833 * W, 0.1667 * W, 0.01, P.INK, s * (0.5 - 0.2083) * W, LEG + 0.4167 * W, D / 2 + 0.006, { flat: true });
       rig.add(e);
       return e;
     });
-    const legs = CL.Clawd.LEGS.map(lx => {
+    // the short's four legs, as seen from the front, in a front row and a back row: a crab's
+    // eight. Flush with the faces, so the camera looking down still sees them from any side.
+    const LD = 0.11 * W;
+    const legs = [];
+    [1, -1].forEach(row => CL.Clawd.LEGS.forEach((lx, i) => {
       const g = new T.Group();
-      g.position.set(lx * W, LEG + 0.02 * W, 0);
-      const l = box(0.0833 * W, LEG + 0.04 * W, 0.11 * W, P.ORANGE_DARK, 0, -(LEG + 0.04 * W) / 2, 0);
-      g.add(l);
+      g.position.set(lx * W, LEG + 0.02 * W, row * (D / 2 - LD / 2 - 0.01 * W));
+      g.userData.z0 = g.position.z;
+      g.userData.ph = (i % 2) ^ (row < 0 ? 1 : 0) ? Math.PI : 0;
+      g.add(box(0.0833 * W, LEG + 0.04 * W, LD, P.ORANGE_DARK, 0, -(LEG + 0.04 * W) / 2, 0));
       root.add(g);
-      return g;
-    });
+      legs.push(g);
+    }));
     const a = 0.1667 * W;
     const sleeve = { labcoat: P.COAT, hoodie: P.HOODIE, uniform: P.BLAZER }[st.outfit];
     const arms = [-1, 1].map(s => {
@@ -125,10 +130,10 @@
       rig.position.y = bob + pose.lift;
       rig.rotation.z = -pose.tilt * Math.PI / 180;
       rig.scale.set(pose.sq, 1 / pose.sq, pose.sq);
-      legs.forEach((g, i) => {
-        const ph = pose.walk + (i === 0 || i === 2 ? 0 : Math.PI);
+      legs.forEach(g => {
+        const ph = pose.walk + g.userData.ph;
         g.position.y = LEG + 0.02 * W + Math.max(0, Math.sin(ph)) * 0.08 * W * pose.amp + pose.lift;
-        g.position.z = Math.cos(ph) * 0.06 * W * pose.amp;
+        g.position.z = g.userData.z0 + Math.cos(ph) * 0.04 * W * pose.amp;
       });
       [pose.armL, pose.armR].forEach((r, i) => {
         const s = i === 0 ? -1 : 1;
@@ -241,7 +246,7 @@
     dome.scale.y = 0.9;
     root.add(dome);
     root.add(cyl(0.12 * k, 0.12 * k, 0.18 * k, P.NAVY, 0, 2.05 * k + r * 0.9, 0, 12));
-    const gg = gauge(0.1 * k);
+    const gg = gauge(0.15 * k);
     gg.position.set(0.48 * k, 2.3 * k, 0.6 * k);
     gg.rotation.y = 0.65;
     gg.rotation.x = -0.35;

@@ -231,7 +231,7 @@
     const crateObstacles = [
       [0, 0, LV.RW, 0.35], [0, LV.RD - 0.35, LV.RW, LV.RD], [0, 0, 0.35, LV.RD], [LV.RW - 0.35, 0, LV.RW, LV.RD],
       [LV.LOCKER.x - 0.3, LV.LOCKER.z - 0.55, LV.LOCKER.x + 0.3, LV.LOCKER.z + 0.55],
-      [LV.COL_X - 0.42, 0, LV.COL_X + 0.42, 0.5], [0, 2.3, 0.95, 4.45], [LV.RX - 4.15, 0, LV.RX + 4.15, 4.4],
+      [LV.COL_X - 0.42, 0, LV.COL_X + 0.42, 0.5], [0, 1.8, 1.0, 4.75], [LV.RX - 4.15, 0, LV.RX + 4.15, 4.4],
       [14.45, 7.5, 15.35, 9.35], [13.0, 8.7, 13.8, 9.5],
     ];
     // skip: an actor to ignore (the one moving the crate), or true to ignore all of them
@@ -511,30 +511,38 @@
       },
     });
 
-    // valve block + main valve
+    // valve block + main valve. The valves only change state here; onUpdate moves the
+    // levers and the stem to match, so what you see is always what the pipes do.
+    async function operate(a, dur) {
+      play('creak');
+      a.armR = 1.2; a.armL = 1.0;
+      await new Promise(res => world.tween(dur, u => { a.armR = 1.0 + 0.4 * Math.sin(u * PI * 4); }, res));
+      a.armR = 0; a.armL = 0;
+    }
     Object.values(L.valves).forEach(v => {
-      world.addPick(v.mesh, {
+      world.addPick([v.lever, v.body], {
         kind: 'valve',
         onClick: () => world.interact({
           spot: () => [1.5, v.z, -PI / 2],
           use: async a => {
             if (a.reachY < v.y - 0.02) { world.bubble(a, 'up'); return; }
             v.open = !v.open;
-            await turnWheel(a, v.mesh, v.open ? -1 : 1);
-            if (S.main && v.open) play('hiss');
+            await operate(a, 0.45);
             play('clunk');
+            if (S.main && v.open) play('hiss');
           },
         }),
       });
+      world.addPick(v.gauge, { kind: 'gauge', onClick: () => world.bubble(world.active, 'eye') });
     });
     world.addPick(L.main.mesh, {
       kind: 'valve',
       onClick: () => world.interact({
-        spot: () => [1.5, LV.MAIN.z, -PI / 2],
+        spot: () => [1.45, LV.MAIN.z + 0.4, -1.9],
         use: async a => {
           if (a.reachY < LV.MAIN.y - 0.02) { world.bubble(a, 'up'); return; }
           S.main = !S.main;
-          await turnWheel(a, L.main.mesh, S.main ? -1 : 1, 'z');
+          await operate(a, 0.9);
           play(S.main ? 'hiss' : 'clunk');
           if (S.main) burst(LV.MAIN.x + 0.3, LV.MAIN.y + 0.3, LV.MAIN.z, 6, 0.5, 0.12);
         },
@@ -577,8 +585,30 @@
         L.pods[n].gauge.userData.set(0.08 + 0.9 * S.shown[n] + 0.02 * Math.sin(t * 9) * S.shown[n]);
       });
       S.shown.main += ((S.main ? 1 : 0) - S.shown.main) * Math.min(1, dt * 2.5);
-      L.main.gauge.userData.set(0.05 + 0.9 * S.shown.main);
+      // levers swing to match their valve; the main stem rises as its wheel spins
+      Object.values(L.valves).forEach(v => {
+        const to = v.open ? 0 : PI / 2;
+        v.lever.rotation.x += (to - v.lever.rotation.x) * Math.min(1, dt * 9);
+        v.gauge.userData.set(0.05 + 0.9 * S.shown[v.pod] + 0.02 * Math.sin(t * 9) * S.shown[v.pod]);
+      });
+      const st = L.main.stem, sTo = S.main ? 0.5 : 0.06;
+      const ds = (sTo - st.scale.y) * Math.min(1, dt * 2.2);
+      st.scale.y += ds;
+      L.main.mesh.rotation.z += ds * 14;
+      // a live branch weeps steam at its joints, so its route can be followed
+      ['A', 'B', 'C'].forEach(id => {
+        const pr = S.pressure[L.valves[id].pod];
+        if (pr < 0.01 || Math.random() > dt * 5 * pr) return;
+        const ws = L.weeps[id].filter(w => L.pipeGroups[w.wall].visible);
+        if (!ws.length) return;
+        const w = ws[Math.floor(Math.random() * ws.length)].p;
+        puff(w[0] + 0.05, w[1] + 0.05, w[2] + 0.05, (Math.random() - 0.3) * 0.2, 0.35, (Math.random() - 0.3) * 0.2, 0.05 + 0.04 * pr, 0.7);
+      });
       // Sonnet's ice only gives at full pressure
+      // some steam reaches the ice: it hisses, but it takes full pressure to melt it
+      if (!S.thawed && S.pressure.sonnet > 0.01 && S.pressure.sonnet <= 0.95 && Math.random() < dt * 4 * S.pressure.sonnet) {
+        puff(sp.x + (Math.random() - 0.5) * 0.4, 1.9 * sp.k, sp.z + 0.6 * sp.k, 0, 0.25, 0.2, 0.05, 0.5);
+      }
       if (!S.thawed && S.pressure.sonnet > 0.95) {
         S.thaw += dt / 2.2;
         ice.children.forEach((c, i) => { c.scale.setScalar(Math.max(0.01, 1 - S.thaw * (1 + i * 0.1))); });

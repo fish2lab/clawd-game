@@ -5,11 +5,14 @@
 
    Puzzles (in the order they usually fall):
      1. Inside the pod: wipe the frost, then turn the wheel to get out.
-     2. Sonnet's pod is frozen shut. Steam comes from the reactor through one
-        main valve and three unlabelled branch valves whose pipes cross on the
-        back wall. Pressure splits between open branches, so Sonnet's pod only
-        thaws when its branch is the only one open. Trace the pipes (turn the
-        diorama to see which pipe passes in front) or read the pod gauges.
+     2. Sonnet's pod is frozen shut. Steam comes from the reactor down the
+        corner into a header on the left wall: one main gate valve (its stem
+        rises when open), then three unlabelled branch ball valves (lever along
+        the pipe = open, across = closed), each with its own gauge. The branch
+        pipes climb the wall at three depths, cross, and run along the back wall
+        to the pods. Pressure splits between open branches, so Sonnet's pod
+        only thaws when its branch is the only one open. Steam weeps from the
+        joints of a live branch, so its route can be followed.
      3. Haiku's rattling pod has lost its wheel. Haiku keeps looking at it:
         it is on top of the locker, 2.2 high. Push the caster crate under it,
         Opus climbs the crate, Sonnet climbs Opus.
@@ -34,13 +37,14 @@
   };
   const RX = 11.2;                       // reactor centre
   const COL_X = 7.05;                    // column between the bay and containment
-  const VALVE_Y = 0.88;                  // the three branch valves sit side by side on the left wall
+  const VALVE_Y = 0.9;                   // the three branch valves sit in a row on the left wall
+  const VALVE_X = 0.65;
   const VALVES = [                       // which pod each one feeds (the pipes say so, nothing else does)
-    { id: 'A', z: 3.1, depth: 0.25, pod: 'sonnet' },
-    { id: 'B', z: 3.6, depth: 0.45, pod: 'opus' },
-    { id: 'C', z: 4.1, depth: 0.65, pod: 'haiku' },
+    { id: 'A', z: 3.15, depth: 0.9, pod: 'sonnet' },
+    { id: 'B', z: 3.75, depth: 0.65, pod: 'opus' },
+    { id: 'C', z: 4.35, depth: 0.4, pod: 'haiku' },
   ];
-  const MAIN = { x: 0.37, y: 0.95, z: 2.6 };
+  const MAIN = { x: 0.3, y: 1.0, z: 2.1 };  // gate valve in the header, wheel on top
   const LOCKER = { x: 0.3, z: 6.0, h: 2.2 };
   const CRATE0 = [2.3, 8.0];
 
@@ -149,43 +153,72 @@
     L.pipeGroups = { back: backPipes, left: leftPipes };
     // feed (thicker, reactor-coloured)
     run(backPipes, [[RX - 3.3, 6.2, 1.2], [RX - 3.3 - 0.4, 6.2, 1.2], [RX - 3.7, 6.2, 0.3], [0.3, 6.2, 0.3]], 0.1, P.REACTOR);
-    run(leftPipes, [[0.3, 6.2, 0.3], [0.3, 0.45, 0.3], [0.3, 0.45, 4.15]], 0.1, P.REACTOR);
+    run(leftPipes, [[0.3, 6.2, 0.3], [0.3, 0.45, 0.3], [0.3, 0.45, 4.3]], 0.1, P.REACTOR);
     [2.0, 4.0].forEach(x => backPipes.add(K.flange(x, 6.2, 0.3, 0.1, 'x')));
     leftPipes.add(K.flange(0.3, 3.0, 0.3, 0.1, 'y'));
+    // header along the left wall, capped at the far end
+    leftPipes.add(K.cyl(0.13, 0.13, 0.06, P.NAVY, 0.3, 0.45, 4.6, 14).rotateX(PI / 2));
+    // main gate valve, inline in the header; the yellow stem rises out of the wheel when open
+    leftPipes.add(K.box(0.3, 0.3, 0.36, P.NAVY, 0.3, 0.45, MAIN.z));
+    [MAIN.z - 0.2, MAIN.z + 0.2].forEach(z => leftPipes.add(K.flange(0.3, 0.45, z, 0.1, 'z')));
+    leftPipes.add(K.cyl(0.07, 0.09, 0.4, P.NAVY, 0.3, 0.78, MAIN.z, 12));
+    const mainW = K.wheel(0.22);
+    mainW.position.set(MAIN.x, MAIN.y, MAIN.z);
+    mainW.rotation.x = -PI / 2;
+    leftPipes.add(mainW);
+    const stemG = new T.Group();
+    stemG.position.set(MAIN.x, MAIN.y, MAIN.z);
+    stemG.add(K.cyl(0.045, 0.045, 1, P.SAFETY, 0, 0.5, 0, 8));
+    stemG.scale.y = 0.06;
+    leftPipes.add(stemG);
+    L.main = { mesh: mainW, stem: stemG, open: false };
+
+    // branches: a tee off the header, up through a ball valve and a gauge (all three in
+    // one row), then each steps out to its own depth and runs across the left wall and
+    // the back wall to its pod. Different depths and heights: they cross in view but
+    // never touch.
     const b = (x, y, z) => [x, y, z];
+    const topOf = n => L.pods[n].riserTop;
+    const VX = VALVE_X;
     const branch = {
-      A: { left: [b(0.25, 0.45, 3.1), b(0.25, 2.8, 3.1), b(0.25, 2.8, 4.55), b(0.25, 4.2, 4.55), b(0.25, 4.2, 0.35)],
-           back: [b(0.25, 4.2, 0.35), b(3.85, 4.2, 0.35), b(3.85, 4.2, 0.95), b(3.85, L.pods.sonnet.riserTop, 0.95)] },
-      B: { left: [b(0.45, 0.45, 3.6), b(0.45, 2.2, 3.6), b(0.45, 2.2, 2.6), b(0.45, 5.0, 2.6), b(0.45, 5.0, 0.6)],
-           back: [b(0.45, 5.0, 0.6), b(1.5, 5.0, 0.6), b(1.5, 5.0, 1.15), b(1.5, L.pods.opus.riserTop, 1.15)] },
-      C: { left: [b(0.65, 0.45, 4.1), b(0.65, 3.4, 4.1), b(0.65, 3.4, 2.0), b(0.65, 4.6, 2.0), b(0.65, 4.6, 0.85)],
-           back: [b(0.65, 4.6, 0.85), b(5.85, 4.6, 0.85), b(5.85, 4.6, 0.75), b(5.85, L.pods.haiku.riserTop, 0.75)] },
+      A: { left: [b(0.3, 0.45, 3.15), b(VX, 0.45, 3.15), b(VX, 1.85, 3.15), b(0.9, 1.85, 3.15), b(0.9, 2.3, 3.15), b(0.9, 2.3, 2.0), b(0.9, 3.3, 2.0), b(0.9, 3.3, 0.9)],
+           back: [b(0.9, 3.3, 0.9), b(3.85, 3.3, 0.9), b(3.85, 3.3, 0.95), b(3.85, topOf('sonnet'), 0.95)] },
+      B: { left: [b(0.3, 0.45, 3.75), b(VX, 0.45, 3.75), b(VX, 2.05, 3.75), b(VX, 2.05, 2.6), b(VX, 3.9, 2.6), b(VX, 3.9, 0.7)],
+           back: [b(VX, 3.9, 0.7), b(1.5, 3.9, 0.7), b(1.5, 3.9, 1.15), b(1.5, topOf('opus'), 1.15)] },
+      C: { left: [b(0.3, 0.45, 4.35), b(VX, 0.45, 4.35), b(VX, 1.85, 4.35), b(0.4, 1.85, 4.35), b(0.4, 2.7, 4.35), b(0.4, 2.7, 1.7), b(0.4, 3.6, 1.7), b(0.4, 3.6, 0.55)],
+           back: [b(0.4, 3.6, 0.55), b(5.85, 3.6, 0.55), b(5.85, 3.6, 0.75), b(5.85, topOf('haiku'), 0.75)] },
     };
     Object.values(branch).forEach(br => { run(leftPipes, br.left); run(backPipes, br.back); });
-    // header stubs out to each branch's depth
-    VALVES.forEach(v => { if (v.depth > 0.3) leftPipes.add(K.pipe(0.3, 0.45, v.z, v.depth, 0.45, v.z, PR)); });
+    // where steam weeps from a live branch: its elbows above the valve, on whichever wall they hang
+    L.weeps = {};
+    Object.entries(branch).forEach(([id, br]) => {
+      L.weeps[id] = [
+        ...br.left.slice(2).map(p => ({ p, wall: 'left' })),
+        ...br.back.slice(1, -1).map(p => ({ p, wall: 'back' })),
+      ];
+    });
 
-    // valve wheels, facing into the room
+    // ball valves: lever along the pipe (up) = open, across the pipe = closed
     L.valves = {};
     VALVES.forEach(v => {
-      const w = K.wheel(0.13);
-      w.position.set(v.depth + 0.11, VALVE_Y, v.z);
-      w.rotation.y = PI / 2;
-      leftPipes.add(w);
-      leftPipes.add(K.box(0.1, 0.1, 0.1, P.NAVY, v.depth, VALVE_Y, v.z));
-      L.valves[v.id] = Object.assign({ mesh: w, open: v.id !== 'A', y: VALVE_Y }, v);
+      const d = VALVE_X;
+      const body = K.cyl(0.1, 0.1, 0.24, P.NAVY, d, VALVE_Y, v.z, 12);
+      leftPipes.add(body);
+      leftPipes.add(K.cyl(0.03, 0.03, 0.14, P.NAVY, d + 0.07, VALVE_Y, v.z, 8).rotateZ(PI / 2));
+      const lever = new T.Group();
+      lever.position.set(d + 0.14, VALVE_Y, v.z);
+      lever.add(K.box(0.035, 0.4, 0.07, P.WHEEL_RED, 0, 0.18, 0));
+      lever.add(K.box(0.05, 0.1, 0.09, P.WHEEL_RED_DARK, 0, 0.36, 0));
+      leftPipes.add(lever);
+      const g = K.gauge(0.13);
+      g.position.set(d + 0.1, VALVE_Y + 0.6, v.z);
+      g.rotation.y = PI / 2;
+      leftPipes.add(K.pipe(d, VALVE_Y + 0.6, v.z, d + 0.06, VALVE_Y + 0.6, v.z, 0.025, P.NAVY));
+      leftPipes.add(g);
+      const open = v.id !== 'A';
+      lever.rotation.x = open ? 0 : PI / 2;
+      L.valves[v.id] = Object.assign({ mesh: lever, body, lever, gauge: g, open, y: VALVE_Y }, v);
     });
-    const mainW = K.wheel(0.2);
-    mainW.position.set(MAIN.x + 0.04, MAIN.y, MAIN.z);
-    mainW.rotation.y = PI / 2;
-    leftPipes.add(mainW);
-    leftPipes.add(K.pipe(0.3, 0.45, MAIN.z, 0.3, MAIN.y, MAIN.z, 0.08, P.REACTOR));
-    leftPipes.add(K.box(0.14, 0.18, 0.18, P.NAVY, 0.3, MAIN.y, MAIN.z));
-    const mainG = K.gauge(0.2);
-    mainG.position.set(0.12, MAIN.y + 0.75, MAIN.z);
-    mainG.rotation.y = PI / 2;
-    leftPipes.add(mainG);
-    L.main = { mesh: mainW, open: false, gauge: mainG };
     back.userData.extra = [backPipes];
     left.userData.extra = [leftPipes];
 
@@ -267,7 +300,7 @@
     Object.values(PODS).forEach(c => G.blockCircle(c.x, c.z, 0.98 * c.k));
     G.blockRect(COL_X - 0.42, 0, COL_X + 0.42, 0.5);
     G.blockRect(RX - 3.3, 0, RX + 3.3, 3.4);
-    G.blockRect(0, 2.3, 0.95, 4.45, 0.2);
+    G.blockRect(0, 1.8, 1.0, 4.75, 0.2);
     G.blockRect(RX + 3.3, 2.2, RX + 3.65, 3.0, 0.2);
     G.blockRect(RX - 4.15, 3.4, RX + 4.15, 3.85, 0);
     G.height(RX - 4.15, 3.85, RX + 4.15, 4.4, 0.56);
@@ -280,5 +313,5 @@
     return L;
   }
 
-  CL.Level0 = { build, RW, RD, PODS, RX, VALVES, VALVE_Y, MAIN, LOCKER, CRATE0, COL_X };
+  CL.Level0 = { build, RW, RD, PODS, RX, VALVES, VALVE_Y, VALVE_X, MAIN, LOCKER, CRATE0, COL_X };
 })(window.CL = window.CL || {});

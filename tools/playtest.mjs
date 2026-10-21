@@ -53,13 +53,13 @@ try {
   await shot('lights');
 
   // 2. steam: main valve on, close B and C, open A
-  await click(0.41, 0.95, 2.6, 'main valve');
+  await click(0.3, 1.0, 2.1, 'main valve');
   await until(() => window.__probe.state().main, 'main valve open');
-  await click(0.56, 0.88, 3.6, 'valve B');
+  await click(0.79, 1.1, 3.75, 'valve B lever');
   await until(() => !window.__probe.valves().B, 'valve B closed');
-  await click(0.76, 0.88, 4.1, 'valve C');
+  await click(0.79, 1.1, 4.35, 'valve C lever');
   await until(() => !window.__probe.valves().C, 'valve C closed');
-  await click(0.36, 0.88, 3.1, 'valve A');
+  await click(0.79, 0.9, 3.33, 'valve A lever');
   await until(() => window.__probe.valves().A, 'valve A open');
   await until(() => window.__probe.state().thawed, 'Sonnet pod thawed', 15000);
   await shot('thawed');

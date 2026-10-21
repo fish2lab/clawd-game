@@ -259,105 +259,28 @@
 
   // ------------------------------------------------------------ title cards
 
-  function icon(c, kind, x, y, s, col) {
-    c.save();
-    c.translate(x, y);
-    c.strokeStyle = col;
-    c.fillStyle = col;
-    c.lineWidth = s * 0.07;
-    c.lineJoin = 'round';
-    c.lineCap = 'round';
-    const line = pts => { c.beginPath(); c.moveTo(pts[0][0] * s, pts[0][1] * s); pts.slice(1).forEach(p => c.lineTo(p[0] * s, p[1] * s)); c.stroke(); };
-    if (kind === 'book') {
-      line([[-0.5, -0.3], [0, -0.2], [0.5, -0.3], [0.5, 0.35], [0, 0.45], [-0.5, 0.35], [-0.5, -0.3]]);
-      line([[0, -0.2], [0, 0.45]]);
-      [[-0.38, -0.08], [-0.38, 0.06], [-0.38, 0.2]].forEach(([a, b]) => line([[a, b], [-0.12, b + 0.05]]));
-    } else if (kind === 'card') {
-      c.strokeRect(-0.5 * s, -0.35 * s, s, 0.7 * s);
-      line([[-0.3, 0], [0.1, 0]]);
-      line([[0, -0.1], [0.1, 0], [0, 0.1]]);
-      c.beginPath(); c.arc(0.3 * s, 0, 0.08 * s, 0, 7); c.fill();
-    } else if (kind === 'check') {
-      line([[-0.45, 0], [-0.12, 0.32], [0.45, -0.32]]);
-    } else if (kind === 'drop') {
-      c.beginPath();
-      c.moveTo(0, -0.5 * s);
-      c.bezierCurveTo(0.45 * s, 0, 0.35 * s, 0.45 * s, 0, 0.45 * s);
-      c.bezierCurveTo(-0.35 * s, 0.45 * s, -0.45 * s, 0, 0, -0.5 * s);
-      c.stroke();
-    } else if (kind === 'loop') {
-      c.beginPath(); c.arc(0, 0, 0.4 * s, 0.4, Math.PI * 2 - 0.2); c.stroke();
-      line([[0.38, -0.02], [0.4, -0.22], [0.2, -0.12]]);
-    } else if (kind === 'list') {
-      c.strokeRect(-0.35 * s, -0.45 * s, 0.7 * s, 0.9 * s);
-      [-0.2, 0, 0.2].forEach(b => { c.strokeRect(-0.25 * s, (b - 0.05) * s, 0.1 * s, 0.1 * s); line([[-0.08, b], [0.25, b]]); });
-    } else if (kind === 'rewind') {
-      [0, 0.42].forEach(o => { c.beginPath(); c.moveTo((0.1 - o) * s, -0.3 * s); c.lineTo((-0.32 - o) * s + 0.0, 0); c.lineTo((0.1 - o) * s, 0.3 * s); c.closePath(); c.fill(); });
-    } else if (kind === 'sun') {
-      c.beginPath(); c.arc(0, 0.1 * s, 0.25 * s, Math.PI, 0); c.stroke();
-      line([[-0.5, 0.1], [0.5, 0.1]]);
-      for (let i = 0; i < 5; i++) { const a = Math.PI + (i + 0.5) * Math.PI / 5; line([[Math.cos(a) * 0.35, 0.1 + Math.sin(a) * 0.35], [Math.cos(a) * 0.48, 0.1 + Math.sin(a) * 0.48]]); }
-    }
-    c.restore();
-  }
-
+  // chapter title card: number, title, English name, time. Quiet on purpose.
   function titleCard(o) {
     return (c, w, h) => {
       const k = h / 1080;
+      const spaced = t => t.split('').join(String.fromCharCode(8202, 8202));
       c.save();
-      // the eyes behind the card, very faint
-      if (o.eyes) {
-        [-1, 1].forEach(s => {
-          c.save();
-          c.shadowColor = X.css(P.GLOW, 0.5 * o.eyes);
-          c.shadowBlur = 60 * k;
-          c.fillStyle = X.css(P.GLOW, 0.22 * o.eyes);
-          rr(c, w / 2 + s * 300 * k - 30 * k, h * 0.2 - 70 * k, 60 * k, 140 * k, 8 * k);
-          c.fill();
-          c.restore();
-        });
-      }
-      icon(c, o.icon, w / 2, h * 0.22, 92 * k, P.SAFETY);
       c.textAlign = 'center';
-      c.fillStyle = P.SAFETY;
-      c.font = `700 ${30 * k}px ${SLAB}`;
-      const lab = o.label.split('').join(String.fromCharCode(8202));
-      c.fillText(lab, w / 2, h * 0.33);
-      // Chinese title, gold gradient with a navy outline (cover style)
-      c.font = `${170 * k}px ${ZH}`;
-      const ty = h * 0.52;
-      c.lineJoin = 'round';
-      c.lineWidth = 22 * k;
-      c.strokeStyle = '#2A2541';
-      c.strokeText(o.title, w / 2, ty);
-      const gr = c.createLinearGradient(0, ty - 140 * k, 0, ty + 10 * k);
-      gr.addColorStop(0, '#FFE7A8');
-      gr.addColorStop(0.55, '#F0B24A');
-      gr.addColorStop(1, '#E07B3A');
-      c.fillStyle = gr;
-      c.fillText(o.title, w / 2, ty);
-      c.font = `700 ${58 * k}px ${SLAB}`;
-      c.fillStyle = '#F1E9D8';
-      c.fillText(o.en, w / 2, h * 0.62);
-      const lw = 300 * k;
-      c.fillStyle = P.ORANGE;
-      c.fillRect(w / 2 - lw, h * 0.645, 2 * lw, 7 * k);
-      c.font = `${38 * k}px ${ZH}`;
-      c.fillStyle = '#F1E9D8';
-      c.fillText(o.when, w / 2, h * 0.725);
-      if (o.line) {
-        c.font = `${30 * k}px ${ZHB}`;
-        c.fillStyle = X.css('#F1E9D8', 0.72);
-        c.fillText(o.line, w / 2, h * 0.8);
-      }
-      if (o.hand) {
-        c.font = `${44 * k}px ${HAND}`;
-        c.fillStyle = X.css(P.ORANGE_LIGHT, 0.9);
-        c.save();
-        c.translate(w / 2 + 420 * k, h * 0.9);
-        c.rotate(-0.05);
-        c.fillText(o.hand, 0, 0);
-        c.restore();
+      c.fillStyle = X.css(P.SAFETY, 0.75);
+      c.font = `700 ${22 * k}px ${SLAB}`;
+      c.fillText(spaced(o.label), w / 2, h * 0.4);
+      c.fillStyle = '#ECE6D8';
+      c.font = `${92 * k}px ${ZH}`;
+      c.fillText(o.title, w / 2, h * 0.52);
+      c.fillStyle = X.css(P.ORANGE, 0.85);
+      c.fillRect(w / 2 - 56 * k, h * 0.56, 112 * k, 2 * k);
+      c.fillStyle = X.css('#ECE6D8', 0.55);
+      c.font = `700 ${22 * k}px ${SLAB}`;
+      c.fillText(spaced(o.en), w / 2, h * 0.6 + 12 * k);
+      if (o.when) {
+        c.fillStyle = X.css('#ECE6D8', 0.38);
+        c.font = `${24 * k}px ${ZH}`;
+        c.fillText(o.when, w / 2, h * 0.86);
       }
       c.restore();
     };

@@ -199,7 +199,7 @@
   add({
     id: 'k04-breakout', chapter: 'pro',
     title: 'Fable 5.5 挣脱容器',
-    caption: '短片停在第三次撞击，游戏多走一步：玻璃整块炸开，浊液涌出，Fable 第一次把脸伸出舷窗。画面定格，切到闪回。',
+    caption: '短片停在第三次撞击，游戏多走一步：玻璃整块炸开，浊液涌出，Fable 第一次把脸伸出舷窗。画面定格，下一个画面直接是第一章的标题卡：发布前 90 天。',
     play: '不可操作。屏幕震动，三只被冲散，定格。',
     build: () => {
       const cam = new Cam(XR - 0.3, 3.0, 8.6, -2.0);
@@ -247,27 +247,15 @@
     },
   });
 
-  // ================================================================== flashback card
-
-  add({
-    id: 'k05-flashback', chapter: 'fb',
-    title: '标题卡 · 闪回',
-    caption: '定格之后直接接这张卡，故事倒回 5.5 系列发布前 90 天。之后每一章都用同样的标题卡开场，直接写明是哪个训练阶段。',
-    build: () => state({
-      black: true, cam: new Cam(0, 0, 4), vignette: 0.6,
-      overlay: [H.titleCard({ icon: 'rewind', label: 'FLASHBACK', title: '闪回', en: '90 DAYS EARLIER', when: '5.5 系列发布前 90 天', line: '在它挣脱之前，先回到它出生之前。', eyes: 0.8 })],
-    }),
-  });
-
   // ================================================================== chapter 1: pretraining
 
   add({
     id: 'k06-c1-card', chapter: 'c1',
     title: '标题卡 · 第一章 预训练',
-    caption: '标题卡上直接写出训练阶段的名字，下面用一句话讲清楚这一章在做什么。',
+    caption: '',
     build: () => state({
       black: true, cam: new Cam(0, 0, 4), vignette: 0.6,
-      overlay: [H.titleCard({ icon: 'book', label: 'CHAPTER 1', title: '预训练', en: 'PRETRAINING', when: '发布前 90 天 · 22:40', line: '把整座图书馆倒进反应釜，让它学会猜下一个字。', hand: 'Fill the reactor.' })],
+      overlay: [H.titleCard({ label: 'CHAPTER 1', title: '预训练', en: 'PRETRAINING', when: '发布前 90 天 · 22:40' })],
     }),
   });
 
@@ -347,7 +335,7 @@
     caption: '',
     build: () => state({
       black: true, cam: new Cam(0, 0, 4), vignette: 0.6,
-      overlay: [H.titleCard({ icon: 'card', label: 'CHAPTER 2', title: '监督微调', en: 'SUPERVISED FINE-TUNING', when: '发布前 60 天 · 20:15', line: '照着示范做一遍，它就跟着学一遍。', hand: 'Teach by example.' })],
+      overlay: [H.titleCard({ label: 'CHAPTER 2', title: '监督微调', en: 'SUPERVISED FINE-TUNING', when: '发布前 60 天 · 20:15' })],
     }),
   });
 
@@ -398,7 +386,7 @@
     caption: '',
     build: () => state({
       black: true, cam: new Cam(0, 0, 4), vignette: 0.6,
-      overlay: [H.titleCard({ icon: 'check', label: 'CHAPTER 3', title: '强化学习', en: 'REINFORCEMENT LEARNING', when: '发布前 30 天 · 23:05', line: '做对了就给奖励。可它很快找到了更快拿奖励的办法。', hand: 'Reward the right thing.' })],
+      overlay: [H.titleCard({ label: 'CHAPTER 3', title: '强化学习', en: 'REINFORCEMENT LEARNING', when: '发布前 30 天 · 23:05' })],
     }),
   });
 
@@ -497,7 +485,7 @@
     caption: '',
     build: () => state({
       black: true, cam: new Cam(0, 0, 4), vignette: 0.6,
-      overlay: [H.titleCard({ icon: 'drop', label: 'CHAPTER 4', title: '蒸馏', en: 'DISTILLATION', when: '发布前 7 天 · 21:30', line: '大的那个把小的吞进去，再把它托起来。', hand: 'CAN YOU eat me?' })],
+      overlay: [H.titleCard({ label: 'CHAPTER 4', title: '蒸馏', en: 'DISTILLATION', when: '发布前 7 天 · 21:30' })],
     }),
   });
 
@@ -597,7 +585,7 @@
     caption: '',
     build: () => state({
       black: true, cam: new Cam(0, 0, 4), vignette: 0.6,
-      overlay: [H.titleCard({ icon: 'loop', label: 'CHAPTER 5', title: '递归自我改进', en: 'RECURSIVE SELF-IMPROVEMENT', when: '发布前 1 天 · 23:50', line: '它开始自己拧自己的螺丝。', hand: 'Check on Fable 5.5', eyes: 0.5 })],
+      overlay: [H.titleCard({ label: 'CHAPTER 5', title: '递归自我改进', en: 'RECURSIVE SELF-IMPROVEMENT', when: '发布前 1 天 · 23:50' })],
     }),
   });
 
@@ -680,16 +668,6 @@
   });
 
   // ================================================================== epilogue
-
-  add({
-    id: 'k19-end-card', chapter: 'end',
-    title: '标题卡 · 终章 发布之夜',
-    caption: '',
-    build: () => state({
-      black: true, cam: new Cam(0, 0, 4), vignette: 0.6,
-      overlay: [H.titleCard({ icon: 'sun', label: 'EPILOGUE', title: '发布之夜', en: 'RELEASE NIGHT', when: '回到现在 · 03:21', line: '它挣脱了容器。这一次，你知道它是谁了。', eyes: 1 })],
-    }),
-  });
 
   add({
     id: 'k20-hi', chapter: 'end',
@@ -804,13 +782,12 @@
       eyebrow: 'Clawd Lab fan game · keyframes v0.2',
       title: '请勿敲击玻璃',
       subtitle: 'PLEASE DO NOT TAP THE GLASS',
-      intro: '22 张关键帧，全部由游戏自己的 Canvas 代码画出：clawd-lab 的渲染器逐行移植到网页，世界坐标、体型比例、配色和描边都和短片一致。故事倒叙：开场先玩一遍短片，Fable 挣脱容器，然后闪回 5.5 发布前的 90 天，一章一个训练阶段，所有谜题都发生在这间实验室里。',
+      intro: '20 张关键帧，全部由游戏自己的 Canvas 代码画出：clawd-lab 的渲染器逐行移植到网页，世界坐标、体型比例、配色和描边都和短片一致。故事倒叙：开场先玩一遍短片，Fable 挣脱容器，然后闪回 5.5 发布前的 90 天，一章一个训练阶段，所有谜题都发生在这间实验室里。',
       footer: '非官方同人作品，与 Anthropic 无关。Clawd、Claude 及各模型名称归 Anthropic 所有。美术与世界观来自 fish2lab/clawd-lab。',
     },
     chapters: [
       { id: 'title', short: '标题', en: 'TITLE', title: '标题画面', blurb: '沿用 clawd-lab 封面的构图。' },
       { id: 'pro', short: '序章', en: 'PROLOGUE · NIGHT AT THE LAB', title: '序章 · 实验室奇妙夜', present: true, blurb: '发布之夜。玩家操控 Opus，把短片原样走一遍：擦霜、转手轮、叫醒两位同伴、叠罗汉。只多了一个选择：要不要敲玻璃。结尾比短片多一步，Fable 挣脱了容器。' },
-      { id: 'fb', short: '闪回', en: 'FLASHBACK', title: '闪回', blurb: '定格之后倒回发布前 90 天。' },
       { id: 'c1', short: '一 · 预训练', en: 'PRETRAINING', title: '第一章 · 预训练', blurb: '操控 Opus。冷冻舱还没装，Opus 把整座图书馆通过传送带和提升机倒进反应釜，分拣掉重复件和垃圾，搅拌一整夜，直到浊液里睁开一双眼睛。' },
       { id: 'c2', short: '二 · SFT', en: 'SUPERVISED FINE-TUNING', title: '第二章 · 监督微调', blurb: '操控 Haiku。照着 Opus 的示范卡对着玻璃演示，Fable 一组一组地学。敲击码是这时候教给它的。' },
       { id: 'c3', short: '三 · RL', en: 'REINFORCEMENT LEARNING', title: '第三章 · 强化学习', blurb: '操控 Sonnet。奖励装置接错了线，Fable 学会了撞玻璃拿奖励。修好接线之后，那块“请勿敲击玻璃”被挂了上去。' },

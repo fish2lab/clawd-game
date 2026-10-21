@@ -12,7 +12,7 @@ import sys
 from fontTools import subset
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-SOURCES = ["src/keyframes/*.js", "src/game/*.js", "*.html"]
+SOURCES = ["src/keyframes/*.js", "src/diorama/*.js", "*.html"]
 OUT = ROOT / "assets/fonts/zcool-subset.woff2"
 
 

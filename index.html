@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>请勿敲击玻璃</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="src/diorama/game.css">
+</head>
+<body>
+<div id="stage" aria-label="实验室箱庭"></div>
+
+<div class="hud-tl" id="hud-tl" hidden>
+  <section class="todo" id="todo" aria-label="Opus 的清单">
+    <h2>TO-DO</h2>
+    <ol>
+      <li data-i="0"><i></i><span>Exit pod</span></li>
+      <li data-i="1"><i></i><span>Wake Sonnet 5.5</span></li>
+      <li data-i="2"><i></i><span>Wake Haiku 5.5</span></li>
+      <li data-i="3"><i></i><span>Check on Fable 5.5</span></li>
+    </ol>
+  </section>
+</div>
+<div class="hud-bl" id="who" hidden></div>
+<div class="hud-br" id="hud-br" hidden>
+  <button class="btn" id="rot-l" aria-label="向左转动箱庭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.5-5.8"/><path d="M4 4v4h4"/></svg></button>
+  <button class="btn" id="rot-r" aria-label="向右转动箱庭"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.5-5.8"/><path d="M20 4v4h-4"/></svg></button>
+  <button class="btn" id="mute" aria-label="静音"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9a4 4 0 0 1 0 6"/></svg></button>
+</div>
+
+<div class="screen" id="start">
+  <div class="card">
+    <div class="label">PROLOGUE</div>
+    <h1>请勿敲击玻璃</h1>
+    <div class="rule"></div>
+    <div class="en">PLEASE DO NOT TAP THE GLASS</div>
+    <div class="when">发布之夜 · 03:12</div>
+    <div class="keys"><span><b>点击</b>走动 / 使用</span><span><b>拖动</b>擦</span><span><b>Q</b><b>E</b>转动箱庭</span><span><b>Tab</b>切换</span><span><b>滚轮</b>缩放</span></div>
+    <button id="go" type="button">开始</button>
+  </div>
+</div>
+<div class="screen black" id="card" hidden>
+  <div class="card">
+    <div class="label" id="card-label">CHAPTER 1</div>
+    <h1 id="card-title">预训练</h1>
+    <div class="rule"></div>
+    <div class="en" id="card-en">PRETRAINING</div>
+    <div class="when" id="card-when">发布前 90 天 · 22:40</div>
+    <button id="again" type="button" hidden>再玩一次</button>
+  </div>
+</div>
+
+<script src="vendor/three.min.js"></script>
+<script src="src/art/palette.js"></script>
+<script src="src/engine/gfx.js"></script>
+<script src="src/art/clawd.js"></script>
+<script src="src/art/lab.js"></script>
+<script src="src/diorama/ink.js"></script>
+<script src="src/diorama/tex.js"></script>
+<script src="src/diorama/kit.js"></script>
+<script src="src/diorama/sound.js"></script>
+<script src="src/diorama/engine.js"></script>
+<script src="src/diorama/level0.js"></script>
+<script src="src/diorama/play0.js"></script>
+<script src="src/diorama/main.js"></script>
+</body>
+</html>

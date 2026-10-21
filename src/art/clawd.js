@@ -397,6 +397,52 @@
     return [-(W / 2 + a * 0.55) * c - 0.05 * W * c, 0.1667 * W + 0.27 * W + st.arm_l * 0.24 * W];
   }
 
+  // one box face: body colour, outfit decal, goggles, frost, outline
+  function drawFace(g, st, F, kind, W, H, D, eyes) {
+    const body = rrect(0, 0, F.width, H, 0.035 * W);
+    const base = P.ORANGE;
+    F.fill(body, base);
+    g.fillShader(F.tp(body), g.linGrad(0, H, 0, 0, [shade(base, 1.10 * F.bright), shade(base, 0.93 * F.bright)]), 0.55);
+    if (kind.startsWith('side')) F.hatch(body, 0.13, 'diag', null, 0.5);
+    else F.hatch(rect(0, 0, F.width, H * 0.45), 0.07, 'diag', null, 0.5);
+    if (st.screen_glow > 0 && kind === 'front') g.fill(F.tp(rect(0.05 * W, H * 0.25, W * 0.95, H * 0.95)), P.SCREEN, 0.10 * st.screen_glow);
+    if (kind === 'front') {
+      if (eyes) drawEyes(F, st, W);
+      outfitFront(F, st, W);
+      if (st.outfit === 'hoodie') glasses(F, st, W);
+    } else if (kind === 'back') outfitBack(F, st, W);
+    else outfitSide(F, st, W, D, kind === 'side_r');
+    if (st.outfit === 'labcoat') goggles(F, st, W, H, kind === 'front' ? 'front' : kind === 'back' ? 'back' : 'side');
+    if (st.frozen > 0) {
+      F.fill(body, '#DCEAF7', 0.55 * st.frozen);
+      F.hatch(body, 0.25 * st.frozen, 'cross', '#FFFFFF', 0.35);
+      for (let i = 0; i < 9; i++) {
+        const u = CL.gfx.hash01('fz', i, kind) * F.width, v = CL.gfx.hash01('fzv', i, kind) * H;
+        F.fill(circle(u, v, (0.01 + 0.02 * CL.gfx.hash01('fr', i)) * W), '#FFFFFF', 0.7 * st.frozen);
+      }
+    }
+    F.stroke(body, 1.25);
+    if (st.rim > 0) {
+      g.soft(F.tp(rect(0, H * 0.55, F.width, H)), P.GLOW, 0.02 * W, 0.18 * st.rim, 'lighter');
+      g.stroke(F.tp(poly([[0, H], [F.width, H]], false)), 2.2, P.GLOW, 0.8 * st.rim);
+    }
+  }
+
+  // A face decal on its own, framed edge to edge (for 3-D textures).
+  // kind: 'front' | 'back' | 'side_r' | 'side_l'. Returns a canvas.
+  function faceDecal(st, kind, pxPerUnit, eyes) {
+    const W = st.W, H = 0.6667 * W, D = 0.62 * W;
+    const fw = kind.startsWith('side') ? D : W;
+    const cv = document.createElement('canvas');
+    cv.width = Math.round(fw * pxPerUnit);
+    cv.height = Math.round(H * pxPerUnit);
+    const g = new CL.gfx.G(cv.getContext('2d'), cv.width, cv.height, new CL.gfx.Cam(fw / 2, H / 2, H));
+    g.beginWorld();
+    drawFace(g, st, new Face(g, 1, 0, 0, fw, kind.startsWith('side') ? 'side' : kind, kind.startsWith('side') ? SIDE : 1), kind, W, H, D, eyes);
+    g.end();
+    return cv;
+  }
+
   // ------------------------------------------------------------ main
 
   function draw(g, st, t) {
@@ -443,35 +489,7 @@
     if (s < -0.02) faces.push(['side_l', -s * W / 2, new Face(g, -s, W / 2 * c + D / 2 * s, LEG, D, 'side', SIDE)]);
 
     faces.forEach(([kind, dep, F]) => {
-      items.push([dep, () => {
-        const body = rrect(0, 0, F.width, H, 0.035 * W);
-        const base = P.ORANGE;
-        F.fill(body, base);
-        g.fillShader(F.tp(body), g.linGrad(0, H, 0, 0, [shade(base, 1.10 * F.bright), shade(base, 0.93 * F.bright)]), 0.55);
-        if (kind.startsWith('side')) F.hatch(body, 0.13, 'diag', null, 0.5);
-        else F.hatch(rect(0, 0, F.width, H * 0.45), 0.07, 'diag', null, 0.5);
-        if (st.screen_glow > 0 && kind === 'front') g.fill(F.tp(rect(0.05 * W, H * 0.25, W * 0.95, H * 0.95)), P.SCREEN, 0.10 * st.screen_glow);
-        if (kind === 'front') {
-          drawEyes(F, st, W);
-          outfitFront(F, st, W);
-          if (st.outfit === 'hoodie') glasses(F, st, W);
-        } else if (kind === 'back') outfitBack(F, st, W);
-        else outfitSide(F, st, W, D, kind === 'side_r');
-        if (st.outfit === 'labcoat') goggles(F, st, W, H, kind === 'front' ? 'front' : kind === 'back' ? 'back' : 'side');
-        if (st.frozen > 0) {
-          F.fill(body, '#DCEAF7', 0.55 * st.frozen);
-          F.hatch(body, 0.25 * st.frozen, 'cross', '#FFFFFF', 0.35);
-          for (let i = 0; i < 9; i++) {
-            const u = CL.gfx.hash01('fz', i, kind) * F.width, v = CL.gfx.hash01('fzv', i, kind) * H;
-            F.fill(circle(u, v, (0.01 + 0.02 * CL.gfx.hash01('fr', i)) * W), '#FFFFFF', 0.7 * st.frozen);
-          }
-        }
-        F.stroke(body, 1.25);
-        if (st.rim > 0) {
-          g.soft(F.tp(rect(0, H * 0.55, F.width, H)), P.GLOW, 0.02 * W, 0.18 * st.rim, 'lighter');
-          g.stroke(F.tp(poly([[0, H], [F.width, H]], false)), 2.2, P.GLOW, 0.8 * st.rim);
-        }
-      }]);
+      items.push([dep, () => drawFace(g, st, F, kind, W, H, D, true)]);
     });
 
     const a = 0.1667 * W;
@@ -553,5 +571,5 @@
     return [st.x + ox * st.sq, st.y + st.lift + bob + oy / st.sq];
   }
 
-  CL.Clawd = { CS, draw, drawClipboard, drawLaptop, clipboardWorld, height, TODO, LEGS };
+  CL.Clawd = { CS, draw, drawClipboard, drawLaptop, clipboardWorld, height, faceDecal, TODO, LEGS };
 })(window.CL = window.CL || {});

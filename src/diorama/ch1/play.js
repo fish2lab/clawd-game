@@ -617,13 +617,6 @@
     info(L.rx.fly, 'gauge', a => look(a, powered('mixer') ? 'eye' : 'q'));
     world.addPick(L.exit, { kind: 'exit', onClick: (hit, a) => a && world.interact({ spot: () => [15.2, 6.6, PI / 2], use: async a2 => { play('dull'); world.bubble(a2, 'lock'); } }, null, a) });
 
-    // test hook: in ?fast mode a first click on the porthole ends the chapter (tools/playtest-flow.mjs)
-    let anyClick = false;
-    world.on('click', hit => {
-      if (!anyClick && fast && hit.info.kind === 'glass' && !S.done) { S.done = true; api.finish(); }
-      anyClick = true;
-    });
-
     // ---------------------------------------------------- the night: mixer, LOSS, clock
     const T0 = 22 + 40 / 60, NIGHT_H = 7;
     function lossTarget() {
@@ -957,6 +950,8 @@
     const game = {
       S, A, L,
       probe: {
+        // ends the chapter at once, for tools/playtest-flow.mjs (the chapter itself is played in playtest-ch1.mjs)
+        finish: () => { if (!S.done) { S.done = true; api.finish(); } },
         pallet: id => (S.fed.includes(id) ? null : [pallets[id].mesh.position.x, pallets[id].mesh.position.z]),
         // which pallet (or what kind of thing) the pointer would hit at a screen point
         pickId: (sx, sy) => { const h = world.pick([sx, sy]); if (!h) return null; for (const id in pallets) if (pallets[id].pinfo === h.info) return id; return h.info.kind; },

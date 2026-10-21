@@ -7,7 +7,7 @@ import { drive } from './lib/drive.mjs';
 const card = page => page.evaluate(() => [document.getElementById('card-label').textContent, document.getElementById('card-title').textContent, !document.getElementById('again').hidden]);
 
 await drive('ch1', async ({ page, click, until }) => {
-  await click(11.2, 3.35, 3.46, 'the porthole');
+  await page.evaluate(() => window.__probe.finish());   // ch1 itself is played in playtest-ch1.mjs
   await until(() => window.__probe.state().done, 'ch1 finished');
   await page.waitForSelector('#card:not([hidden])', { timeout: 20000 });
   console.log('ok   next card:', JSON.stringify(await card(page)));

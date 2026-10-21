@@ -51,6 +51,36 @@
     const L = CL.Room.build(world, { clock: [3, 12] });   // everything the logic needs
     const { back, left } = L.walls;
 
+    // Under the PLEASE DO NOT TAP THE GLASS sign, a safety placard with no words:
+    // three Clawds stacked on the hazard plinth like the rings of a Tower of Hanoi,
+    // biggest at the bottom, and an arrow up to the porthole.
+    const hanoi = K.decal(0.66, 0.8, TX.tex(TX.paint(0.66, 0.8, 512, g => {
+      const { rect, poly, circle } = CL.gfx;
+      g.fs(rect(0, 0, 0.66, 0.8), P.SAFETY, 1.0);
+      g.stroke(rect(0.05, 0.05, 0.61, 0.75), 0.6);
+      // hazard base
+      g.fs(rect(0.09, 0.1, 0.57, 0.16), P.INK, 0.6);
+      for (let i = 0; i < 6; i++) g.fill(poly([[0.1 + i * 0.08, 0.1], [0.14 + i * 0.08, 0.1], [0.18 + i * 0.08, 0.16], [0.14 + i * 0.08, 0.16]]), P.SAFETY, 1.0);
+      // the peg, then the three rings: Opus, Sonnet, Haiku
+      g.fs(rect(0.32, 0.16, 0.34, 0.6), P.INK, 0.5);
+      let y = 0.16;
+      [[0.36, 0.12], [0.28, 0.095], [0.2, 0.07]].forEach(([w, h]) => {
+        g.fs(rect(0.33 - w / 2, y, 0.33 + w / 2, y + h), P.ORANGE, 0.9);
+        g.fs(rect(0.33 - w / 2 - 0.025, y + h * 0.3, 0.33 - w / 2, y + h * 0.6), P.ORANGE, 0.7);
+        g.fs(rect(0.33 + w / 2, y + h * 0.3, 0.33 + w / 2 + 0.025, y + h * 0.6), P.ORANGE, 0.7);
+        [-1, 1].forEach(sd => g.fill(rect(0.33 + sd * w * 0.21 - 0.008, y + h * 0.45, 0.33 + sd * w * 0.21 + 0.008, y + h * 0.75), P.INK, 1.0));
+        y += h;
+      });
+      // up to the porthole
+      g.line(0.33, y + 0.03, 0.33, 0.63, 1.0, P.INK);
+      g.fill(poly([[0.33, 0.67], [0.3, 0.62], [0.36, 0.62]]), P.INK, 1.0);
+      g.fs(circle(0.5, 0.64, 0.065), P.NAVY, 0.8);
+      g.fill(circle(0.5, 0.64, 0.04), P.GLASS, 1.0);
+    })), { useAlpha: false });
+    hanoi.position.set(2.88, 1.62, L.reactor.frontZ + 0.02);
+    L.reactor.root.add(hanoi);
+    L.hanoi = hanoi;
+
     // ---------------------------------------------------- pods
     L.pods = {};
     Object.entries(PODS).forEach(([name, c], i) => {

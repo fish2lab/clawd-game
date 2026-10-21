@@ -181,12 +181,18 @@ await drive('ch1', async ({ page, click, until, sleep, shot, portrait: pick, set
   await until(() => window.__probe.state().eyes, 'eyes open in the murk', 20000);
   await shot('eyes');
   const hoverAt = async (x, z) => {
+    await idle('opus');
+    await settle();
     const [sx, sy] = await page.evaluate(([x, z]) => window.__probe.screen(x, 0, z), [x, z]);
     await page.mouse.move(sx - 30, sy, { steps: 2 });
     await page.mouse.move(sx, sy, { steps: 3 });
-    await sleep(1500);
-    const e = await page.evaluate(() => window.__probe.eyes());
-    const d = Math.hypot(e.target[0] - x, e.target[2] - z);
+    // they get there before Opus does; give them a moment to settle on a still pointer
+    let e, d = 99;
+    for (let i = 0; i < 12 && d > 1.5; i++) {
+      await sleep(500);
+      e = await page.evaluate(() => window.__probe.eyes());
+      d = Math.hypot(e.target[0] - x, e.target[2] - z);
+    }
     if (d > 1.5) throw new Error(`eyes look at ${e.target.map(v => v.toFixed(1))}, not the pointer at ${x}, ${z}`);
     console.log(`ok   eyes on the pointer at ${x}, ${z} (off by ${d.toFixed(2)})`);
   };

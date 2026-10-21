@@ -643,12 +643,24 @@
     const eyeLook = new T.Vector2(), eyeTo = new T.Vector2();
     let eyeOpen = 0, faceA = 0, hover = null, hoverV = new T.Vector3(), hoverT = -9, lastWalk = 0, eyesT = 0, dawnT = 0;
     S.eyeTarget = [0, 0, 0];
-    world.on('move', hit => {
-      if (!hit) return;
-      const p = hit.point.clone();
+    // where the pointer is in the room: whatever it is over, else the floor under it
+    let ptr = null;
+    const ground = new T.Plane(new T.Vector3(0, 1, 0), 0);
+    function pointAt(p) {
+      const h = world.pick(p);
+      if (h) return h.point.clone();
+      world.ray.setFromCamera(new T.Vector2(p[0] / world.w * 2 - 1, -(p[1] / world.h) * 2 + 1), world.cam);
+      return world.ray.ray.intersectPlane(ground, new T.Vector3());
+    }
+    const cvs = world.renderer.domElement;
+    cvs.addEventListener('pointermove', e => {
+      const r = cvs.getBoundingClientRect();
+      ptr = [e.clientX - r.left, e.clientY - r.top];
+      const p = pointAt(ptr);
+      if (!p) return;
       if (hover && world.t - hoverT > 0.001) {
         const v = p.clone().sub(hover).divideScalar(Math.max(0.03, world.t - hoverT));
-        hoverV.lerp(v, 0.5);
+        hoverV.lerp(v, 0.5).clampLength(0, 6);
       }
       hover = p;
       hoverT = world.t;
@@ -879,10 +891,12 @@
 
       // ---- the eyes (the pointer's speed fades once it stops moving)
       hoverV.multiplyScalar(Math.exp(-dt * 4));
+      // the camera may move under a still pointer: look again at what is under it now
+      if (S.eyes && ptr && world.t - hoverT < 4) { const p = pointAt(ptr); if (p) hover = p; }
       if (R.eyes[0].visible) {
         let tgt;
         if (S.stare) tgt = world.cam.position.clone();
-        else if (S.eyes && hover && world.t - hoverT < 1.5) {
+        else if (S.eyes && hover && world.t - hoverT < 4) {
           // not where Opus is: where the pointer is going
           tgt = hover.clone().addScaledVector(hoverV, 0.45);
           tgt.x = clamp(tgt.x, 0.5, 15.5); tgt.z = clamp(tgt.z, 0.5, 9.5); tgt.y = clamp(tgt.y, 0, 6);
@@ -978,8 +992,8 @@
           world.rig.zoom = world.rig.zoomT = 9.5;
         } else if (name === 'panel') {
           S.sw.belt = true; S.sw.magnet = true;
-          A.opus.place(1.05, 10 - L.panel.switches.belt.lx, 0, -PI / 2);
-          A.opus.armR = 1.2;
+          A.opus.place(1.1, 2.9, 0, -PI / 2);
+          A.sonnet.place(2.4, 7.4, 0, PI);
           world.rig.target.set(0.3, 1.05, 10 - (LV.PANEL.lx0 + LV.PANEL.lx1) / 2);
           world.rig.zoom = world.rig.zoomT = 3.6;
           world.rig.az = world.rig.azT = 62;

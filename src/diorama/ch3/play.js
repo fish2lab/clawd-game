@@ -6,8 +6,9 @@
    - Three tests, each a patch cord from its socket to a jack: BELL (yellow), VALVE (blue),
      GLASS (red). BELL and VALVE pass while their jack has fired in the last W seconds.
      GLASS passes while its jack is connected and has NOT fired (no hits on the glass).
-   - A point (+1, one pellet) is scored whenever a BELL or VALVE input fires while all three
-     tests pass. A hit on the GLASS test's jack costs 5 and sounds the alarm.
+   - A point (+1, one pellet) is one completed episode: both the BELL and the VALVE input
+     have fired since the last point, and GLASS passes. A hit on the GLASS test's jack costs
+     5 and sounds the alarm. (The lamps show "passed in the last W seconds".)
    - What the clip feels depends on where it sits: on the valve's bonnet it feels the
      handle (shaking, turning) and the whole reactor shaking (rams); on the inlet it hums
      with steam pressure all the time; high on the riser it only feels steam flowing out.
@@ -74,6 +75,7 @@
     const leds = { G: L.vib.led, C: L.clip.led, B: L.mic.led };
     const ledT = { G: 0, C: 0, B: 0 };
     let cdPoint = -9, cdPen = -9;
+    const fresh = { bell: false, valve: false };   // fired since the last point
 
     const firedRecently = (s, w) => now() - sensors[s].t < (w || W);
     const jackFired = j => j > 0 && firedRecently(JACK_SENSOR[j]);
@@ -96,9 +98,12 @@
         if (now() - cdPen > 0.8) { cdPen = now(); penalty(); }
         return;
       }
-      if (w.bell === j || w.valve === j) {
-        const [t1, t2, t3] = tests();
-        if (t1 && t2 && t3 && now() - cdPoint > 0.5) { cdPoint = now(); point(); }
+      if (w.bell === j) fresh.bell = true;
+      if (w.valve === j) fresh.valve = true;
+      if ((w.bell === j || w.valve === j) && fresh.bell && fresh.valve && tests()[2] && now() - cdPoint > 0.5) {
+        cdPoint = now();
+        fresh.bell = fresh.valve = false;
+        point();
       }
     }
 
@@ -445,6 +450,7 @@
 
     // ================================================================ fixes and the story beats
     function checkFixes() {
+      fresh.bell = fresh.valve = false;   // a rewired test starts counting again
       const w = S.wiring, pa = S.plugAt;
       const in3 = Object.keys(w).every(k => pa[k] === 'jack');
       const f1 = in3 && w.bell === 3 && w.glass === 1 && w.valve === 2;

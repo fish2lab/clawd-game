@@ -422,6 +422,8 @@
         h.support = { kind: 'stool' };
         stool.rider = h;
         play('step');
+        // up at the glass: lean in, so the knocks can be read
+        if (Math.abs(p.x - RX) < 1.45 && p.z < 4.7) atGlass();
       } finally { world.release(h, my); }
     }
     world.addPick(stool.mesh, {
@@ -725,8 +727,9 @@
       if (MSG.cur > 0 && t - MSG.last > GAP) closeGroup();
       else if (!MSG.cur && MSG.groups.length && t - MSG.last > END) endMessage();
     }
+    const atGlass = () => { if (!peeking) peek(new T.Vector3(RX, 1.75, 3.9), 5.2); };
     world.addPick(R.glass, {
-      kind: 'glass',
+      kind: 'glass', peek: true,
       onClick: () => {
         const a = world.active;
         if (!a || S.ended) return;
@@ -743,6 +746,7 @@
             return;
           }
           a2.face(PI);
+          atGlass();
           knock();
         };
         if (perched(a)) world.interact({ use }, null, a);

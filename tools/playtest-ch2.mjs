@@ -21,7 +21,7 @@ await drive('ch2', async ({ page, click, until, sleep, shot, portrait, settle, a
   const free = n => page.waitForFunction(n => !window.__game.A[n].busy && !window.__game.A[n].path, n, { timeout: 30000 });
   const recKey = await wp('L.rec.keys.rec');
   const playKey = await wp('L.rec.keys.play');
-  recKey[1] += 0.06; playKey[1] += 0.06;
+  recKey[1] += 0.05; playKey[1] += 0.05;   // just under the top of each key (inside it), so the ray meets the key itself
   const bell = [9.54, 0.95, 6.2], lamp = [11.2, 1.12, 8.14], flag = [13.18, 1.1, 6.2];
   const rope = await wp('L.dev.big.handle');
   const pressRec = async () => { await click(...recKey, 'REC'); await until(() => window.__probe.state().rec, 'recording'); };

@@ -20,10 +20,10 @@ const base = pathToFileURL(path.join(root, 'index.html')).href;
 for (const spec of looks) {
   const [ch, look] = spec.includes('/') ? spec.split('/') : ['prologue', spec];
   await page.goto(`${base}?ch=${ch}&look=${look}`);
-  await page.waitForFunction(() => window.__ready === true, null, { timeout: 90000 });
+  await page.waitForFunction(() => window.__ready === true, null, { timeout: 240000 });
   await page.waitForTimeout(800);
   const file = path.join(outDir, `${spec.replace('/', '-')}.png`);
-  await page.screenshot({ path: file });
+  await page.screenshot({ path: file, timeout: 180000 });
   console.log('wrote', file);
 }
 await browser.close();

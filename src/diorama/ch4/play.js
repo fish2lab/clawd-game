@@ -267,7 +267,7 @@
       // down it comes
       const fy0 = fi.root.position.y;
       world.tween(0.4, u => { sp.scale.y = Math.max(0.001, len * (1 - u)); }, () => { sp.visible = false; });
-      const land = surfaceY() - 0.15;
+      const land = Math.max(C.TANK.sand + 0.14, surfaceY() - 0.15);
       await new Promise(res => world.tween(0.55, u => {
         fi.root.position.y = fy0 + (land - fy0) * u * u;
         fi.root.position.x = b0.x - 0.25 * u;
@@ -369,7 +369,7 @@
 
     // ---------------------------------------------------- the hatch: Haiku crawls under the reactor to the condensate valve
     const crateAtHatch = () => Math.abs(crate.mesh.position.x - C.HATCH.x) < 0.7 && crate.mesh.position.z < 5.5;
-    world.addPick([L.hatch.hole, L.hatch.flapH], {
+    world.addPick(L.hatch.root, {   // the hole, its brass frame, the flap (the dial gets its own pick below)
       kind: 'hatch',
       onClick: () => world.interact({
         spot: () => [C.HATCH.x, 4.88, PI],
@@ -462,6 +462,7 @@
       play('creak');
       await new Promise(res => world.tween(0.8, u => { const e = 1 - Math.pow(1 - u, 3); st.doors[0].rotation.y = -1.95 * e; st.doors[1].rotation.y = 1.95 * e; }, res));
       S.stillOpen = true;
+      U.portBlink = 5;   // the still is fed from the reactor: its data port starts blinking
       play('boil');
       tick(1);
     }
@@ -561,18 +562,21 @@
       world.scene.add(m);
       world.tween(0.5, u => { m.scale.setScalar(1 + 3 * u); m.material.uniforms.uOpacity.value = 1 - u; m.material.transparent = true; }, () => world.scene.remove(m));
     }
+    function camTo(goal, zoom, dur) {
+      const t0 = world.rig.target.clone();
+      world.rig.zoomT = zoom;
+      world.tween(dur, u => { world.rig.target.lerpVectors(t0, goal, u); }, null, CL.Engine.ease);
+    }
     async function success() {
       S.distilled = true;
       S.ended = true;
+      S.distilling = false;
       world.locked = true;
       world.rig.follow = null;
       const h = A.haiku;
       const post = world.pipe.post.uniforms;
       tick(2);
-      world.tween(1.0, u => {
-        world.rig.target.lerp(new T.Vector3(hp.x, 1.0, hp.z + 1.0), u * 0.1);
-        world.rig.zoomT = 6.5;
-      });
+      camTo(new T.Vector3(hp.x + 0.25, 0.9, hp.z + 0.6), 5.2, 1.2);
       play('rise');
       await world.wait(0.6);
       post.uTint.value.set(P.GLOW_CORE);
@@ -598,10 +602,7 @@
       h.armR = 0;
       await world.wait(1.8);
       // the answer, from the other side of the room
-      world.tween(1.4, u => {
-        world.rig.target.lerp(new T.Vector3(C.RX - 1.5, 2.6, 4.6), u * 0.08);
-        world.rig.zoomT = 13;
-      });
+      camTo(new T.Vector3(C.RX - 2.2, 2.2, 4.4), 11.5, 1.6);
       await world.wait(1.5);
       const pq = new T.Quaternion();
       for (let i = 0; i < 2; i++) {
@@ -775,8 +776,10 @@
       // -- the data port, Sonnet's laptop and its readout
       const so = A.sonnet;
       if (S.plugged && (so.busy === 'walk' || Math.hypot(so.x - PORT_SPOT[0], so.z - PORT_SPOT[1]) > 0.35 || perched(so))) { S.plugged = false; play('click'); }
-      L.port.led.material.uniforms.uColor.value.set(S.plugged ? P.CODE_GREEN : P.ALARM);
-      L.port.led.material.uniforms.uEmissive.value.set(A4.mixc(S.plugged ? P.CODE_GREEN : P.ALARM, P.NIGHT, 0.5));
+      U.portBlink = Math.max(0, (U.portBlink || 0) - dt);
+      const ledOn = S.plugged || !(U.portBlink > 0 && Math.sin(t * 12) < 0);
+      L.port.led.material.uniforms.uColor.value.set(S.plugged ? P.CODE_GREEN : ledOn ? P.ALARM : P.INK);
+      L.port.led.material.uniforms.uEmissive.value.set(ledOn ? A4.mixc(S.plugged ? P.CODE_GREEN : P.ALARM, P.NIGHT, 0.5) : A4.NO_GLOW);
       const ro = L.port.readout;
       ro.visible = S.plugged;
       L.port.cable.visible = S.plugged;
@@ -906,15 +909,15 @@
           crawl(A.haiku);
           await ff(0.75);
           return;
-        } else if (name === 'still') {
+        } else if (name === 'still' || name === 'valves') {
           S.stillOpen = true; S.keyDown = S.keyTaken = true; L.key.visible = false;
           st.doors[0].rotation.y = -1.95; st.doors[1].rotation.y = 1.95;
           S.sT = 4; S.valves = [1, 0, 2, 5, 0];
           A.sonnet.place(PORT_SPOT[0], PORT_SPOT[1], C.PLINTH_Y, PI);
           S.plugged = true;
-          A.opus.place(STILL_SPOT[0], STILL_SPOT[1], 0, PI);
-          A.haiku.place(4.8, 2.4, 0, 0.4);
-          at(6.9, 1.5, 4.0, 7.5);
+          A.opus.place(STILL_SPOT[0] - 1.2, STILL_SPOT[1] + 0.3, 0, PI * 0.8);
+          A.haiku.place(3.9, 2.4, 0, 0.4);
+          if (name === 'valves') at(5.5, 1.0, 3.6, 3.2); else at(6.9, 1.5, 4.0, 7.0);
           tick(0); tick(1);
         } else if (name === 'distill') {
           S.stillOpen = true; S.keyDown = S.keyTaken = true; L.key.visible = false;

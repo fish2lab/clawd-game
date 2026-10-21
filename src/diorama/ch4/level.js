@@ -403,11 +403,14 @@
     scene.add(hatch);
     const hole = K.box(0.52, 0.36, 0.01, P.INK, HATCH.x, HATCH.y, HATCH.z, { flat: true });
     hatch.add(hole);
+    // a brass frame, so the hatch reads against the hazard stripes
+    [[0, 0.2, 0.62, 0.05], [0, -0.2, 0.62, 0.05], [-0.29, 0, 0.05, 0.42], [0.29, 0, 0.05, 0.42]].forEach(([dx, dy, w, h]) => hatch.add(K.box(w, h, 0.03, P.BRASS, HATCH.x + dx, HATCH.y + dy, HATCH.z + 0.01)));
     const flapH = new T.Group();
     flapH.position.set(HATCH.x, HATCH.y + 0.18, HATCH.z + 0.012);
     const flap = new T.Group();
     flap.add(K.box(0.5, 0.34, 0.02, P.NAVY, 0, -0.17, 0));
     [-0.08, -0.17, -0.26].forEach(y => flap.add(K.box(0.42, 0.025, 0.012, P.NAVY_DARK, 0, y, 0.012)));
+    flap.add(K.box(0.12, 0.03, 0.03, P.BRASS_LIGHT, 0, -0.31, 0.02));
     flapH.add(flap);
     hatch.add(flapH);
     const dialG = new T.Group();
@@ -443,7 +446,7 @@
     port.position.set(...PORT);
     port.add(K.box(0.26, 0.2, 0.05, P.NAVY_DARK, 0, 0, 0));
     port.add(K.box(0.12, 0.05, 0.012, P.INK, -0.03, -0.02, 0.03, { flat: true }));
-    const led = K.box(0.03, 0.03, 0.012, P.ALARM, 0.08, 0.05, 0.03, { flat: true, lit: true, emissive: A4.mixc(P.ALARM, P.NIGHT, 0.6) });
+    const led = K.box(0.05, 0.05, 0.012, P.ALARM, 0.08, 0.04, 0.03, { flat: true, lit: true, emissive: A4.mixc(P.ALARM, P.NIGHT, 0.6) });
     port.add(led);
     const plab = K.decal(0.26, 0.08, A4.panelText('DATA', 0.26, 0.08, P.SAFETY), { useAlpha: true });
     plab.position.set(0, 0.15, 0.0);
@@ -531,11 +534,11 @@
       still.add(wh);
       const stem = new T.Group();
       stem.position.set(x, VALVE.y, VALVE.z);
-      stem.add(K.box(0.022, 1, 0.022, P.SAFETY, 0, 0.5, 0));
+      stem.add(K.box(0.036, 1, 0.036, P.SAFETY, 0, 0.5, 0, { lit: true, emissive: A4.mixc(P.SAFETY, P.NIGHT, 0.8) }));
       stem.scale.y = VALVE.base;
       still.add(stem);
-      const sc = K.decal(0.08, 0.36, stemTex);
-      sc.position.set(x, VALVE.y + 0.18, VALVE.z - 0.07);
+      const sc = K.decal(0.1, 0.36, stemTex);
+      sc.position.set(x, VALVE.y + 0.18, VALVE.z - 0.05);
       still.add(sc);
       return { wheel: wh, stem, x };
     });

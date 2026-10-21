@@ -88,6 +88,9 @@ await drive('ch4', async ({ page, click, until, sleep, shot, portrait: who }) =>
   await click(5.3, 1.0, 3.6, 'still cabinet door');
   await until(() => window.__probe.state().stillOpen, 'still unlocked and open', 30000);
   await portrait(2);
+  // Sonnet is over at the desk: walk it across first, so the port is on screen
+  await click(8.9, 0, 5.9, 'floor by the reactor');
+  await until(() => { const a = window.__probe.actor('sonnet'); return Math.hypot(a.x - 8.9, a.z - 5.9) < 0.3 && !a.busy; }, 'Sonnet by the reactor', 60000);
   await click(8.45, 1.2, 3.46, 'reactor data port');
   await until(() => window.__probe.state().plugged, 'Sonnet plugged into the data port', 40000);
   console.log('ok   laptop at T 1:', JSON.stringify((await pt('readout')).map(v => +v.toFixed(2))));

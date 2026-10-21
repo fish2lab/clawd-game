@@ -180,8 +180,8 @@
   // a scale plate behind a condenser stem: five ticks
   function stemScale(h, step) {
     return TX.tex(TX.paint(0.1, h, 400, g => {
-      g.fs(rect(0, 0, 0.1, h), P.POD, 0.6);
-      for (let k = 1; k <= 5; k++) g.line(0.0, 0.03 + k * step, 0.1, 0.03 + k * step, k === 5 ? 1.0 : 0.6);
+      g.fs(rect(0, 0, 0.1, h), P.NAVY_DARK, 0.6);
+      for (let k = 1; k <= 5; k++) g.line(0.0, 0.03 + k * step, 0.1, 0.03 + k * step, k === 5 ? 1.4 : 0.9, P.POD);
     }, { line: 1.6 }));
   }
 

@@ -1,0 +1,75 @@
+/* Keyframe board: a screening-room wall for the storyboard.
+   Deliberately single-theme (night lab): navy ground, cream type. */
+@font-face { font-family: "Zilla Slab"; font-weight: 700; src: url("../../assets/fonts/ZillaSlab-Bold.ttf") format("truetype"); font-display: block; }
+@font-face { font-family: "Caveat"; font-weight: 400; src: url("../../assets/fonts/Caveat.ttf") format("truetype"); font-display: block; }
+@font-face { font-family: "ZCOOL QingKe HuangYou"; font-weight: 400; src: url("../../assets/fonts/zcool-subset.woff2") format("woff2"); font-display: block; }
+
+:root {
+  /* layout: one column of chapters, each a row of 16:9 frames that wraps */
+  --ground: #14152B;
+  --panel: #1C1E3A;
+  --line: #2F3368;
+  --cream: #ECE6D8;
+  --muted: #A9A6BF;
+  --brass: #E6BE4A;
+  --clawd: #D97757;
+  --display: "ZCOOL QingKe HuangYou", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --slab: "Zilla Slab", Rockwell, Georgia, serif;
+  --body: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  color-scheme: dark;
+}
+
+html, body { margin: 0; background: var(--ground); color: var(--cream); }
+body { font: 15px/1.65 var(--body); }
+
+#board {
+  max-width: 1360px;
+  margin: 0 auto;
+  padding-block: 40px 80px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid;
+  gap: 56px;
+}
+
+.masthead { display: grid; gap: 14px; max-width: 72ch; }
+.masthead .eyebrow { font: 700 13px/1 var(--slab); letter-spacing: 0.22em; color: var(--brass); text-transform: uppercase; }
+.masthead h1 { margin: 0; font: 400 clamp(40px, 7vw, 76px)/1.05 var(--display); color: var(--brass); text-wrap: balance; }
+.masthead h1 small { display: block; font: 700 clamp(18px, 2.4vw, 26px)/1.2 var(--slab); color: var(--cream); letter-spacing: 0.04em; margin-top: 10px; }
+.masthead p { margin: 0; color: var(--muted); }
+
+.order { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 0; padding: 0; list-style: none; }
+.order li { font: 700 13px/1 var(--slab); letter-spacing: 0.04em; padding: 8px 12px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); }
+.order li b { color: var(--cream); font-weight: 700; }
+.order li.now { border-color: var(--clawd); color: var(--cream); }
+
+.chapter { display: grid; gap: 18px; }
+.chapter > header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; border-top: 1px solid var(--line); padding-top: 16px; }
+.chapter > header h2 { margin: 0; font: 400 28px/1.2 var(--display); color: var(--cream); }
+.chapter > header .en { font: 700 14px/1 var(--slab); letter-spacing: 0.16em; color: var(--brass); text-transform: uppercase; }
+.chapter > header p { flex-basis: 100%; margin: 0; color: var(--muted); max-width: 80ch; }
+
+.frames { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 520px), 1fr)); gap: 28px 24px; }
+
+figure.kf { margin: 0; display: grid; gap: 10px; min-width: 0; }
+figure.kf button { all: unset; cursor: zoom-in; display: block; border-radius: 4px; overflow: hidden; box-shadow: 0 0 0 1px var(--line); }
+figure.kf button:focus-visible { box-shadow: 0 0 0 3px var(--brass); }
+figure.kf canvas { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; background: #0B0A14; }
+figure.kf figcaption { display: grid; gap: 4px; min-width: 0; }
+figure.kf .id { font: 700 12px/1 var(--slab); letter-spacing: 0.14em; color: var(--brass); font-variant-numeric: tabular-nums; }
+figure.kf h3 { margin: 0; font: 700 18px/1.35 var(--body); text-wrap: balance; }
+figure.kf p { margin: 0; color: var(--muted); }
+figure.kf .play { color: var(--cream); }
+figure.kf .play b { color: var(--clawd); font-weight: 700; margin-right: 6px; }
+
+.lightbox { position: fixed; inset: 0; z-index: 20; background: rgba(8, 8, 18, 0.94); display: grid; place-items: center;
+  padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); cursor: zoom-out; }
+.lightbox canvas { width: min(100%, calc((100vh - 64px) * 16 / 9)); height: auto; aspect-ratio: 16 / 9; }
+
+footer.note { color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); padding-top: 16px; }
+
+body.single { background: #000; }
+body.single #board { display: none; }
+body.single canvas#shot { display: block; }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }

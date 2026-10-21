@@ -34,10 +34,8 @@
   const sfx = n => E.Sound.play(n);
   const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
   const ease = CL.Engine.ease;
-  const query = new URLSearchParams(location.search);
   // tools/playtest-flow.mjs reaches this chapter from chapter 5 with ?fast=1 and clicks the
   // porthole, expecting the final card: in that test mode a click on Fable or the porthole ends it.
-  const SMOKE = query.has('fast') && query.get('ch') !== 'epilogue' && !query.has('look');
 
   const PAUSE = 1.5;           // silence that closes a group of knocks (s)
   const LONG = 4.0;            // a single letter left this long is the whole message
@@ -267,7 +265,6 @@
     world.addPick(fab.root, {
       kind: 'fable',
       onClick: (hit, a) => {
-        if (SMOKE) { finishNow(); return; }
         if (!a) return;
         if (S.phase === 'hi') { if (a === A.haiku) knockClick(a); else growlAt(a); return; }
         if (S.phase !== 'stack' || S.fableBusy) return;
@@ -625,7 +622,6 @@
     world.addPick([H.crank, H.rod], {
       kind: 'wheel',
       onClick: (hit, a) => {
-        if (SMOKE) { finishNow(); return; }
         if (!a || !(S.phase === 'hi' || S.phase === 'stack') || S.fableBusy) return;
         if (perched(a)) act(a, null, crankUse);
         else act(a, () => [LV.CRANK.x, LV.CRANK.z], crankUse);
@@ -775,13 +771,13 @@
       kind: 'pod', onClick: (hit, a) => act(a, () => [pd.x, pd.z + 1.25 * pd.k + 0.35, PI], async a2 => { world.bubble(a2, 'zz'); }),
     }));
     // the porthole, empty now
-    world.addPick([R.ring], { kind: 'porthole', onClick: (hit, a) => { if (SMOKE) { finishNow(); return; } if (a) world.bubble(a, 'eye'); } });
+    world.addPick([R.ring], { kind: 'porthole', onClick: (hit, a) => { if (a) world.bubble(a, 'eye'); } });
     // the cavity behind it and the murk at its back
     R.root.children.forEach(o => {
       const g = o.geometry, pr = g && g.parameters;
       const cavity = g && g.type === 'CylinderGeometry' && pr.radiusTop === 2.0;
       const back = g && g.type === 'PlaneGeometry' && pr.width === 4.0 && pr.height === 4.0 && o !== R.face;
-      if (cavity || back) world.addPick(o, { kind: 'porthole', onClick: (hit, a) => { if (SMOKE) { finishNow(); return; } if (a) world.bubble(a, 'eye'); } });
+      if (cavity || back) world.addPick(o, { kind: 'porthole', onClick: (hit, a) => { if (a) world.bubble(a, 'eye'); } });
     });
     R.gauges.forEach(g => world.addPick(g, { kind: 'gauge', onClick: (hit, a) => a && world.bubble(a, 'eye') }));
     world.addPick(L.bolts, { kind: 'bolt', onClick: (hit, a) => a && world.bubble(a, 'eye') });

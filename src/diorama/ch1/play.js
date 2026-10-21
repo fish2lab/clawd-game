@@ -32,8 +32,8 @@
     const LOADS = Object.fromEntries(LV.SWITCHES.map(s => [s.id, s.load]));
     const { SCALE, DUP, BELT, MAGNET, LIFT, PC, SKIM } = LV;
 
-    A.opus.place(3.1, 7.25, 0, PI);
-    A.sonnet.place(4.3, 7.6, 0, PI * 0.9);
+    A.opus.place(4.2, 7.1, 0, PI);
+    A.sonnet.place(5.4, 7.5, 0, PI * 0.9);
     world.active = A.opus;
 
     const hud = api.hud({ todo: ['Load corpus', 'Clean data', 'Run mixer', 'Watch loss'], actors: A });
@@ -49,8 +49,25 @@
     world.destroy = () => { SND.stopAll(); screen.el.remove(); destroy0(); };
 
     // ---------------------------------------------------- picks: floor, plinth, Clawds
+    // Whatever a Clawd sitting in the counterweight cage is told to do, it first hops out
+    // through the cage's open front (never over the bars into a corner).
+    const inCage = a => !!a && S.cage === a.name && a.support && a.support.kind === 'cage';
+    async function leaveCage(a) {
+      if (!inCage(a)) return;
+      S.cage = null;
+      a.support = null;
+      await a.hopTo(LV.LIFT.x, LV.LIFT.zCage + 1.05, 0, 0.45);
+      a.support = null;
+    }
+    const outFirst = fn => (hit, a) => (inCage(a) ? leaveCage(a).then(() => fn(hit, a)) : fn(hit, a));
+    const interact0 = world.interact.bind(world);
+    world.interact = (inf, hit, a) => { a = a || world.active; return inCage(a) ? leaveCage(a).then(() => interact0(inf, hit, a)) : interact0(inf, hit, a); };
     M.floor(L.floor);
     R.root.traverse(o => { if (o.isMesh && o.geometry && o.geometry.parameters && o.geometry.parameters.height === 0.52) M.floor(o, hit => [hit.point.x, Math.max(hit.point.z, 4.0)]); });
+    [L.floor, ...world.pickables.filter(m => m.userData.pick && m.userData.pick.kind === 'floor')].forEach(m => {
+      const f = m.userData.pick;
+      if (f && !f.caged) { f.caged = true; f.onClick = outFirst(f.onClick); }
+    });
     M.actors();
     const look = (a, kind) => world.bubble(a || world.active, kind || 'eye');
     const info = (obj, kind, fn) => world.addPick(obj, { kind, onClick: (hit, a) => { if (a && !S.ended) fn(a, hit); } });
@@ -97,7 +114,7 @@
     let overloadT = 0;
     function checkLoad(id) {
       if (S.tripped) return;
-      if (demand() > LV.LIMIT) { spike = (demand() - LV.LIMIT) / 6 + 0.15; overloadT = 0.35; SND.play('spark'); return; }
+      if (demand() > LV.LIMIT) { spike = (demand() - LV.LIMIT) / 6 + 0.15; overloadT = 0.35; SND.play('spark'); sparks(...panelWorld(LV.AMMETER.lx, LV.AMMETER.y)); return; }
       if (id === 'lift' && S.sw.lift) liftPowered();
     }
     function setSwitch(id, v) {
@@ -196,7 +213,7 @@
           n = Math.abs(dx) > Math.abs(dz) ? new T.Vector3(Math.sign(dx), 0, 0) : new T.Vector3(0, 0, Math.sign(dz));
         }
         if (a === A.opus) sonnetOff();
-        bx.push(a, n);
+        outFirst(() => bx.push(a, n))(hit, a);
       };
       pallets[id] = Object.assign(pl, { bx, pinfo });
     });
@@ -290,7 +307,7 @@
           play('clunk');
           const id = S.scaleOn;
           if (!id) world.bubble(a2, 'q');
-          else if (!powered('belt')) { play('dull'); world.bubble(a2, 'q'); }
+          else if (!powered('belt')) { play('dull'); world.bubble(a2, 'bolt'); }
           else if (S.loads.some(l => l.s < 1.3)) { play('dull'); world.bubble(a2, 'q'); }
           else feed(id);
           await new Promise(res => world.tween(0.3, u => { lv.rotation.z = -0.9 * (1 - u); }, res));
@@ -409,9 +426,7 @@
       spike = 0.55;
       const rider = S.cage ? A[S.cage] : null;
       world.bubble(rider || world.active, 'feather');
-      let t = 0;
       world.tween(0.9, u => {
-        t = u;
         S.liftU = 0.025 * Math.sin(u * PI) + 0.01 * Math.sin(u * 60);
       }, () => {
         S.liftU = 0;
@@ -624,7 +639,7 @@
 
     // ---------------------------------------------------- dawn, the eyes, the end
     const eyeBase = R.eyes.map(e => e.position.clone());
-    const eyeGlows = R.eyes.map(e => { const g = K.glow(P.GLOW, 1.5); g.position.copy(e.position).add(new T.Vector3(0, 0, 0.05)); R.root.add(g); return g; });
+    const eyeGlows = R.eyes.map(e => { const g = K.glow(P.GLOW, 2.6); g.position.copy(e.position).add(new T.Vector3(0, 0, 0.05)); g.renderOrder = 3; R.root.add(g); return g; });
     const eyeLook = new T.Vector2(), eyeTo = new T.Vector2();
     let eyeOpen = 0, faceA = 0, hover = null, hoverV = new T.Vector3(), hoverT = -9, lastWalk = 0, eyesT = 0, dawnT = 0;
     S.eyeTarget = [0, 0, 0];
@@ -648,9 +663,9 @@
       if (!instant) await world.wait(fast ? 1.0 : 2.8);
       // something is in the murk now
       R.face.visible = true;
-      R.eyes.forEach(e => { e.visible = true; e.material.uniforms.uColor.value.set(P.GLOW); e.material.uniforms.uEmissive.value.set(P.ORANGE_DEEP); e.scale.y = 0.05; });
+      R.eyes.forEach(e => { e.visible = true; e.material.uniforms.uColor.value.set(P.GLOW); e.material.uniforms.uEmissive.value.set(P.GLOW).multiplyScalar(0.55); e.material.uniforms.uDark = { value: 0 }; e.scale.y = 0.05; });
       SND.loop('drone', true);
-      if (instant) { eyeOpen = 1; faceA = 0.32; }
+      if (instant) { eyeOpen = 1; faceA = 0.24; murkA = 0.3; }
       else for (const v of [0.05, 0.6, 0.08, 1]) {
         eyeOpen = v;
         SND.play('heart');
@@ -686,8 +701,9 @@
     }
 
     // ---------------------------------------------------- per frame
-    let flare = 0, screenBlink = 0, liquidLevel = -1, lightsK = 0;
+    let flare = 0, screenBlink = 0, liquidLevel = -1, murkA = 0.78;
     world.onUpdate = (dt, t) => {
+      SND.mute(CL.Sound.muted);
       // ---- power and the ammeter
       if (overloadT > 0) { overloadT -= dt; if (overloadT <= 0) trip(); }
       const amps = S.tripped ? 0 : demand() / 6;
@@ -707,7 +723,7 @@
       // ---- light
       let dk = S.tripped ? 0.84 : powered('lamp') ? 0.16 : 0.5;
       let nt = S.tripped ? 0.75 : powered('lamp') ? 0.36 : 0.6;
-      if (dawnT > 0) { dawnT = Math.min(1, dawnT + dt / 3); dk += (0.3 - dk) * dawnT; nt += (0.22 - nt) * dawnT; }
+      if (dawnT > 0) { dawnT = Math.min(1, dawnT + dt / 3); dk += (0.4 - dk) * dawnT; nt += (0.34 - nt) * dawnT; }
       const sh = CL.Ink.shared;
       const k = Math.min(1, dt * (S.tripped ? 25 : 4));
       sh.dark.value += (dk - sh.dark.value) * k;
@@ -717,7 +733,7 @@
       L.desk.pool.material.opacity += ((lampOn ? 0.3 : 0) - L.desk.pool.material.opacity) * k;
       L.desk.glow.material.opacity = lampOn ? 0.8 : 0;
       flare = Math.max(0, flare - dt * 0.6);
-      L.rx.portGlow.material.opacity = (S.tripped ? 0.16 + 0.07 * Math.sin(t * 1.7) : S.mixing ? 0.1 : 0.03) + 0.5 * flare + (S.eyes ? 0.12 : 0);
+      L.rx.portGlow.material.opacity = (S.tripped ? 0.24 + 0.08 * Math.sin(t * 1.7) : S.mixing ? 0.1 : 0.03) + 0.5 * flare + (S.eyes ? 0.22 : 0);
       L.belt.pilot.userData.set(powered('belt'));
       L.magnet.pilot.userData.set(powered('magnet'));
       L.lift.pilot.userData.set(powered('lift'));
@@ -820,6 +836,8 @@
         L.rx.surfLine.position.y = yTop;
         L.rx.surfLine.scale.x = 2 * Math.sqrt(Math.max(0, (PC.r - 0.05) ** 2 - yTop * yTop));
       }
+      murkA += ((dawnT > 0 ? 0.3 : 0.78) - murkA) * Math.min(1, dt * 0.5);
+      L.rx.liquid.material.uniforms.uOpacity.value = murkA;
       L.rx.sightFill.scale.y = Math.max(0.01, PC.y - PC.r + 2 * PC.r * f - LV.SIGHT.y0);
       L.rx.sightFill.position.y = LV.SIGHT.y0 + L.rx.sightFill.scale.y / 2;
       S.mixing = powered('mixer');
@@ -839,6 +857,7 @@
         x = clamp(x, -lim, lim);
         m.position.set(x + (u.k ? 0.32 : 0), y + (u.k ? 0.05 : 0), 3.05 + u.dz);
         m.visible = yTop > -PC.r + 0.25;
+        if (dawnT > 0 && !u.gone) m.material.uniforms.uOpacity.value = 0.85 * (1 - 0.7 * dawnT);
       });
       if (S.mixing && n && !S.ended) {
         if (!S.trained) { S.trained = true; tick(2); circle(3); peek(6.0, 3.0, 3.6, 13.5); }
@@ -858,7 +877,8 @@
       drumFillShown += (drumFill - drumFillShown) * Math.min(1, dt * 1.5);
       L.rx.sludge.position.y = 0.15 + LV.DRUM.h * 0.9 * drumFillShown;
 
-      // ---- the eyes
+      // ---- the eyes (the pointer's speed fades once it stops moving)
+      hoverV.multiplyScalar(Math.exp(-dt * 4));
       if (R.eyes[0].visible) {
         let tgt;
         if (S.stare) tgt = world.cam.position.clone();
@@ -877,9 +897,9 @@
           e.position.set(eyeBase[i].x + eyeLook.x * 0.42 * (S.stare ? 0 : 1), eyeBase[i].y + eyeLook.y * 0.3, eyeBase[i].z);
           e.scale.y = Math.max(0.05, eyeOpen) * (S.stare ? 1.15 : 1);
           eyeGlows[i].position.set(e.position.x, e.position.y, e.position.z + 0.06);
-          eyeGlows[i].material.opacity = eyeOpen * (S.stare ? 1 : 0.75);
+          eyeGlows[i].material.opacity = eyeOpen * (S.stare ? 1 : 0.9);
         });
-        faceA += ((S.eyes ? 0.32 : 0.12) - faceA) * Math.min(1, dt * 0.8);
+        faceA += ((S.eyes ? 0.24 : 0.1) - faceA) * Math.min(1, dt * 0.8);
         R.face.material.uniforms.uOpacity.value = faceA;
       }
       if (S.eyes && !S.ended && Math.random() < dt * 0.5) SND.play('heart');
@@ -954,8 +974,8 @@
           S.sw.belt = true; S.sw.magnet = true;
           plug();
           A.opus.place(2.0, 3.05, 0, PI);
-          world.rig.target.set(5.2, 1.4, 4.4);
-          world.rig.zoom = world.rig.zoomT = 11.5;
+          world.rig.target.set(4.3, 1.3, 3.9);
+          world.rig.zoom = world.rig.zoomT = 9.5;
         } else if (name === 'panel') {
           S.sw.belt = true; S.sw.magnet = true;
           A.opus.place(1.05, 10 - L.panel.switches.belt.lx, 0, -PI / 2);
@@ -997,9 +1017,9 @@
           S.loss = name === 'spam' ? 0.5 : 0.42; S.night = name === 'spam' ? 0.53 : 0.62; setClock();
           S.trained = true; tick(0); tick(2); circle(3);
           A.opus.place(8.6, 5.6, 0, PI);
-          A.sonnet.place(2.4, 5.6, 0, -1.4);
-          world.rig.target.set(7.2, 3.0, 4.2);
-          world.rig.zoom = world.rig.zoomT = 13;
+          A.sonnet.place(1.05, 10 - L.panel.switches.mixer.lx, 0, -PI / 2);
+          if (name === 'spam') { world.rig.target.set(9.6, 3.0, 4.2); world.rig.zoom = world.rig.zoomT = 8.5; }
+          else { world.rig.target.set(6.4, 3.2, 3.8); world.rig.zoom = world.rig.zoomT = 11.5; }
           CL.Ink.shared.dark.value = 0.5; CL.Ink.shared.night.value = 0.6;
           await world.wait(1.5);
           world.paused = true;

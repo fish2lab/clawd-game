@@ -6,7 +6,12 @@
 // line from src/diorama/ch1/solve.mjs); the twin shows up on Sonnet's screen and goes
 // to the DUP bay; the hoist stalls with an empty cage (wrong route), then runs with
 // Opus in it; the mixer runs all night in the dark; the eyes follow the pointer.
+//
+// WRONG=1 node tools/playtest-ch1.mjs takes the wrong route instead: the twin goes in
+// too, the LOSS stalls at half, Opus opens the skim valve, and the night carries on.
 import { drive } from './lib/drive.mjs';
+
+const WRONG = !!process.env.WRONG;
 
 const PANEL = { mixer: 5.02, belt: 5.32, lamp: 5.62, lift: 5.92, magnet: 6.22, main: 6.46 };
 const TOP = 0.73;
@@ -102,23 +107,30 @@ await drive('ch1', async ({ page, click, until, sleep, shot, portrait: pick, set
   await move('push', 'd', 'N');
   await until(() => { const s = window.__probe.state(); return s.scaleOn === 'd' && s.log.some(e => e.w === 42); }, 'd weighs 42, the same as a: a duplicate');
   await shot('twin');
-  await move('pull', 'd', 'S');
-  await move('push', 'd', 'E');
-  await until(() => window.__probe.state().dupBay === 'd', 'd parked on the DUP bay');
-  await until(() => window.__probe.lift().skip.length === 3, 'three bundles in the skip', 30000);
+  if (WRONG) {
+    await feed('d');
+    await until(() => window.__probe.lift().skip.length === 4, 'wrong route: the twin went in too, four bundles in the skip', 30000);
+  } else {
+    await move('pull', 'd', 'S');
+    await move('push', 'd', 'E');
+    await until(() => window.__probe.state().dupBay === 'd', 'd parked on the DUP bay');
+    await until(() => window.__probe.lift().skip.length === 3, 'three bundles in the skip', 30000);
+  }
 
   // 4. the hoist: with an empty cage it stalls and trips (wrong route)
   await portrait(2);
   await idle('sonnet');
   await sw('belt', 'conveyor off');
   await idle('sonnet');
-  await sw('lift', 'hoist on (empty cage)');
-  await until(() => window.__probe.state().tripped, 'empty cage: the hoist stalls, the breaker trips');
-  await idle('sonnet');
-  await sw('lift', 'hoist off');
-  await idle('sonnet');
-  await click(0.24, 0.84, 10 - PANEL.main, 'main breaker');
-  await until(() => !window.__probe.state().tripped, 'breaker reset');
+  if (!WRONG) {
+    await sw('lift', 'hoist on (empty cage)');
+    await until(() => window.__probe.state().tripped, 'empty cage: the hoist stalls, the breaker trips');
+    await idle('sonnet');
+    await sw('lift', 'hoist off');
+    await idle('sonnet');
+    await click(0.24, 0.84, 10 - PANEL.main, 'main breaker');
+    await until(() => !window.__probe.state().tripped, 'breaker reset');
+  }
   // Opus into the cage, Sonnet switches the hoist on
   await portrait(1);
   await click(6.0, 1.3, 2.47, 'counterweight cage');
@@ -129,8 +141,9 @@ await drive('ch1', async ({ page, click, until, sleep, shot, portrait: pick, set
   await until(() => window.__probe.lift().state === 'up', 'the skip climbs');
   await sleep(2500);
   await shot('hoist');
-  await until(() => window.__probe.reactor().items.length === 3, 'corpus in the reactor', 30000);
-  await until(() => { const r = window.__probe.reactor(); return !r.contaminated; }, 'clean corpus: no SPAM, no twin');
+  await until(n => window.__probe.reactor().items.length === n, 'corpus in the reactor', 30000, WRONG ? 4 : 3);
+  if (WRONG) await until(() => window.__probe.reactor().contaminated, 'wrong route: the twin is in the reactor');
+  else await until(() => { const r = window.__probe.reactor(); return !r.contaminated; }, 'clean corpus: no SPAM, no twin');
   await until(() => window.__probe.lift().state === 'idle', 'hoist back down', 20000);
   await shot('loaded');
 
@@ -146,6 +159,22 @@ await drive('ch1', async ({ page, click, until, sleep, shot, portrait: pick, set
   await until(() => { const s = window.__probe.state(); return s.mixing && !s.tripped; }, 'the mixer runs in the dark');
   await sleep(6000);
   await shot('night');
+  if (WRONG) {
+    await until(() => { const s = window.__probe.state(); return s.loss < 0.53; }, 'LOSS stalls at half', 90000);
+    await sleep(3000);
+    const r = await page.evaluate(() => window.__probe.state());
+    if (r.loss < 0.4 || r.dawn) throw new Error('LOSS should have stalled at half');
+    console.log(`ok   still stalled at ${r.loss.toFixed(2)}`);
+    await shot('stalled');
+    await idle('sonnet');
+    await sw('mixer', 'mixer off');
+    await portrait(1);
+    await click(8.5, 1.3, 3.66, 'skim valve (Opus climbs out of the cage)');
+    await until(() => { const r = window.__probe.reactor(); return !r.contaminated && r.items.length === 3; }, 'skimmed: the extra twin ran out into the drum');
+    await portrait(2);
+    await idle('sonnet');
+    await sw('mixer', 'mixer on again');
+  }
   await until(() => window.__probe.state().dawn, 'LOSS reached the bottom: dawn', 90000);
 
   // 6. the eyes look where the pointer is, before Opus gets there
@@ -164,8 +193,8 @@ await drive('ch1', async ({ page, click, until, sleep, shot, portrait: pick, set
   await portrait(1);
   await hoverAt(13.5, 7.0);
   await click(13.5, 0, 7.0, 'walk Opus where the eyes already look');
-  await hoverAt(4.0, 8.0);
-  await click(4.0, 0, 8.0, 'walk Opus again');
+  await hoverAt(9.5, 7.8);
+  await click(9.5, 0, 7.8, 'walk Opus again');
   await until(() => window.__probe.state().ended, 'it looks back at you', 60000);
   await page.waitForSelector('#card:not([hidden])', { timeout: 30000 });
   console.log('ok   chapter 2 card');

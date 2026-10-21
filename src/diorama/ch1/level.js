@@ -403,6 +403,7 @@
     G.blockRect(LIFT.x - 0.47, LIFT.zCage - 0.47, LIFT.x + 0.47, LIFT.zCage + 0.47, 0.2);
     G.blockRect(DESK[0] - 0.4, DESK[1] - 0.42, DESK[0] + 0.4, DESK[1] + 0.42, 0.25);
     G.blockCircle(DRUM.x, DRUM.z, DRUM.r);
+    G.blockRect(6.76, 0.5, 7.9, 3.38, 0);     // the nook behind the cage, by the drum: nobody goes in there
     G.blockRect(0.5, 7.7, 2.4, 9.5);
 
     world.rig.bounds = [3.0, 12.5, 3.0, 7.0];

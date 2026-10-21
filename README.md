@@ -6,9 +6,10 @@
 
 ![序章箱庭](docs/diorama/room.jpg)
 
-**当前状态：序章可玩。** 用浏览器打开 [index.html](index.html) 即可，双击本地文件也能运行。
+**当前状态：序章、第一到第五章、终章都可以玩。** 用浏览器打开 [index.html](index.html) 即可，双击本地文件也能运行。从某一章开始：`index.html?ch=ch3`（或 `#ch3`），章节 id 是 `prologue`、`ch1`…`ch5`、`epilogue`。
 
 - 设计方案：[docs/DESIGN.md](docs/DESIGN.md)
+- 各章实际做成的样子：[docs/chapters/](docs/chapters/)；章节怎么接进游戏：[docs/CHAPTERS.md](docs/CHAPTERS.md)
 - 箱庭截图：[docs/diorama/](docs/diorama/)
 - 关键帧（v0.2 的 2D 分镜，作为美术参考）：[docs/keyframes/](docs/keyframes/)、[keyframes.html](keyframes.html)
 
@@ -34,8 +35,12 @@
 ```bash
 # 截箱庭画面（需要 Node 和 Playwright 的 Chromium）
 node tools/shoot3d.mjs /tmp/shots room steam locker stack back breakout
-# 用真实点击自动通关序章
+# 用真实点击自动通关：序章、各章、章节之间的衔接
 node tools/playtest.mjs /tmp/playtest
+node tools/playtest-ch1.mjs          # ch2…ch5、epilogue 同理
+node tools/playtest-flow.mjs
+# 某一章的画面
+node tools/shoot3d.mjs /tmp/shots ch1/room
 # 重新导出关键帧
 node tools/shoot.mjs /tmp/kf
 pip install pillow && python tools/pack_keyframes.py /tmp/kf

@@ -1,43 +1,9 @@
 // Play the prologue start to finish with real mouse clicks, in headless Chromium.
 //   node tools/playtest.mjs [screenshotDir]
-import { createRequire } from 'node:module';
-import { execSync } from 'node:child_process';
-import { fileURLToPath, pathToFileURL } from 'node:url';
-import path from 'node:path';
-import fs from 'node:fs';
-
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const shots = process.argv[2];
-if (shots) fs.mkdirSync(shots, { recursive: true });
-let pw;
-try { pw = await import('playwright'); } catch (e) { pw = createRequire(path.join(execSync('npm root -g').toString().trim(), 'x.js'))('playwright'); }
-const browser = await pw.chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
-const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
-const errors = [];
-page.on('pageerror', e => errors.push(e.message));
-page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
-await page.goto(pathToFileURL(path.join(root, 'index.html')).href + '?fast=1');
-await page.waitForFunction(() => window.__probe);
-await page.click('#go');
-await page.waitForTimeout(800);
+import { drive } from './lib/drive.mjs';
 
 const RX = 11.2;
-let n = 0;
-const sleep = ms => page.waitForTimeout(ms);
-const settle = async () => { await page.waitForFunction(() => window.__probe.settled(), null, { timeout: 15000 }); await sleep(250); };
-const at = (x, y, z) => page.evaluate(([x, y, z]) => window.__probe.screen(x, y, z), [x, y, z]);
-async function click(x, y, z, label) {
-  await settle();
-  const [sx, sy] = await at(x, y, z);
-  const kind = await page.evaluate(([a, b]) => window.__probe.pickAt(a, b), [sx, sy]);
-  await page.mouse.click(sx, sy);
-  console.log(`  click ${label} @ ${Math.round(sx)},${Math.round(sy)} -> ${kind}`);
-}
-const until = (fn, label, ms) => page.waitForFunction(fn, null, { timeout: ms || 20000 }).then(() => console.log(`ok   ${label}`));
-const shot = async name => { if (shots) await page.screenshot({ path: path.join(shots, `${String(++n).padStart(2, '0')}-${name}.png`) }); };
-const portrait = i => page.click(`#who .who:nth-child(${i})`);
-
-try {
+await drive('prologue', async ({ page, click, until, sleep, shot, portrait, settle, at }) => {
   // 1. out of the pod: wipe the frost, then the wheel
   await settle();
   const [cx, cy] = await at(1.5, 1.37, 1.76);
@@ -117,18 +83,7 @@ try {
   await sleep(2600);
   await shot('eyes');
   await page.waitForSelector('#card:not([hidden])', { timeout: 20000 });
-  console.log('ok   chapter card');
+  console.log('ok   chapter 1 card');
   await sleep(800);
   await shot('card');
-} catch (e) {
-  console.error('FAILED:', e.message.split('\n')[0]);
-  console.error('state:', JSON.stringify(await page.evaluate(() => window.__probe && window.__probe.state())));
-  for (const a of ['opus', 'sonnet', 'haiku']) console.error(a, JSON.stringify(await page.evaluate(n => window.__probe.actor(n), a)));
-  console.error('debug:', JSON.stringify(await page.evaluate(() => window.__probe.debug())));
-  await page.waitForTimeout(2000);
-  console.error('debug 2s later:', JSON.stringify(await page.evaluate(() => window.__probe.debug())));
-  await shot('failed');
-  process.exitCode = 1;
-}
-if (errors.length) { console.error('page errors:\n  ' + errors.join('\n  ')); process.exitCode = 1; }
-await browser.close();
+});

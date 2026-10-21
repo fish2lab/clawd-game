@@ -280,9 +280,31 @@
       this.hover = null;
       this.locked = false;
       this.listeners = {};
+      this.updaters = [];
+      this.winListeners = [];
       this.setupInput();
       this.resize();
-      window.addEventListener('resize', () => this.resize());
+      this.listenWindow('resize', () => this.resize());
+    }
+
+    listenWindow(ev, fn) { window.addEventListener(ev, fn); this.winListeners.push([ev, fn]); }
+
+    // per-frame hooks besides onUpdate (shared effects, chapter systems)
+    addUpdate(fn) { this.updaters.push(fn); return fn; }
+
+    // tear down so the next chapter can start in the same page
+    destroy() {
+      this.dead = true;
+      this.winListeners.forEach(([ev, fn]) => window.removeEventListener(ev, fn));
+      (this.bubbles || []).forEach(b => b.el.remove());
+      this.host.querySelectorAll('.badge').forEach(el => el.remove());
+      this.scene.traverse(o => {
+        if (o.geometry) o.geometry.dispose();
+        if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.dispose());
+      });
+      this.renderer.dispose();
+      this.renderer.forceContextLoss();
+      this.renderer.domElement.remove();
     }
 
     on(ev, fn) { (this.listeners[ev] = this.listeners[ev] || []).push(fn); }
@@ -364,7 +386,7 @@
 
     // ---- input
     setupInput() {
-      const el = this.host;
+      const el = this.renderer.domElement;   // dies with the world, and its listeners with it
       let down = null;
       const pos = e => { const r = el.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
       el.addEventListener('pointerdown', e => {
@@ -384,7 +406,7 @@
           if (hit) down.drag.info.drag(hit, 'move');
           return;
         }
-        if (e.pointerType === 'mouse') this.setHover(this.pick(p));
+        if (e.pointerType === 'mouse') { const hit = this.pick(p); this.setHover(hit); this.emit('move', hit); }
       });
       el.addEventListener('pointerup', e => {
         if (!down) return;
@@ -398,7 +420,7 @@
         e.preventDefault();
         this.rig.zoomT = clamp(this.rig.zoomT * (e.deltaY > 0 ? 1.1 : 0.9), this.rig.zoomMin || 6, this.rig.zoomMax || 20);
       }, { passive: false });
-      window.addEventListener('keydown', e => {
+      this.listenWindow('keydown', e => {
         if (e.key === 'q' || e.key === 'Q') this.rotate(-1);
         if (e.key === 'e' || e.key === 'E') this.rotate(1);
         if (e.key === 'Tab') { e.preventDefault(); this.cycle(); }
@@ -520,6 +542,7 @@
       }
       Object.values(this.actors).forEach(a => a.update(dt, this.t));
       if (this.onUpdate) this.onUpdate(dt, this.t);
+      this.updaters.forEach(f => f(dt, this.t));
       this.updateCamera(dt);
       (this.bubbles || []).slice().forEach(b => {
         b.t += dt;
@@ -545,6 +568,7 @@
     start() {
       let last = performance.now();
       const loop = now => {
+        if (this.dead) return;
         const dt = this.paused ? 0 : Math.min(this.opt.maxDt || 0.05, (now - last) / 1000);
         last = now;
         this.update(dt);

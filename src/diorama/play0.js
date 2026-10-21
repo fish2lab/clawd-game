@@ -10,7 +10,7 @@
   const PI = Math.PI;
   const play = n => S0.play(n);
 
-  function setup(world, L) {
+  function setup(world, L, api) {
     const S = {
       opusOut: false, wiped: 0, main: false, thaw: 0, thawed: false, sonnetFree: false,
       wheelTaken: false, wheelOn: false, haikuFree: false, ended: false,
@@ -68,82 +68,21 @@
     world.scene.add(screenGlow);
 
     // ---------------------------------------------------- HUD
-    const whoBar = document.getElementById('who');
-    const portraits = {};
-    ['opus', 'sonnet', 'haiku'].forEach(n => {
-      const b = document.createElement('button');
-      b.className = 'who';
-      b.type = 'button';
-      b.setAttribute('aria-label', { opus: 'Opus 5.5', sonnet: 'Sonnet 5.5', haiku: 'Haiku 5.5' }[n]);
-      const st = CL.Clawd.CS({ W: CL.Engine.SPECS[n].W, outfit: CL.Engine.SPECS[n].outfit });
-      b.appendChild(CL.Clawd.faceDecal(st, 'front', 200 / st.W, true));
-      b.addEventListener('click', () => world.select(A[n]));
-      whoBar.appendChild(b);
-      portraits[n] = b;
-    });
-    function refreshHud() {
-      Object.entries(portraits).forEach(([n, b]) => {
-        b.classList.toggle('on', world.active === A[n]);
-        b.classList.toggle('off', !A[n].free);
-      });
-    }
-    world.on('select', a => { refreshHud(); world.rig.follow = a; });
-    document.getElementById('rot-l').addEventListener('click', () => world.rotate(-1));
-    document.getElementById('rot-r').addEventListener('click', () => world.rotate(1));
-    document.getElementById('mute').addEventListener('click', e => { S0.mute(!S0.muted); e.currentTarget.style.opacity = S0.muted ? 0.45 : 1; });
-    const todo = document.getElementById('todo');
-    todo.addEventListener('click', () => todo.classList.toggle('min'));
-    const tick = i => { todo.querySelector(`li[data-i="${i}"]`).classList.add('done'); play('click'); };
-    const circle = i => todo.querySelector(`li[data-i="${i}"]`).classList.add('circled');
-
-    function badge(a, text, dur) {
-      const el = document.createElement('div');
-      el.className = 'badge';
-      el.textContent = text;
-      world.host.appendChild(el);
-      let t = 0;
-      const tw = world.tween(dur || 2.2, u => {
-        t = u;
-        const [x, y] = world.project(new T.Vector3(a.x, a.y + a.height + 0.5 + 0.4 * u, a.z));
-        el.style.transform = `translate(${x}px, ${y}px) translate(-50%, -100%)`;
-        el.style.opacity = u > 0.8 ? (1 - u) / 0.2 : 1;
-      }, () => el.remove());
-      return tw;
-    }
+    const hud = api.hud({ todo: ['Exit pod', 'Wake Sonnet 5.5', 'Wake Haiku 5.5', 'Check on Fable 5.5'], actors: A });
+    const { tick, circle, badge } = hud;
+    const refreshHud = hud.refresh;
 
     // ---------------------------------------------------- steam puffs (white balls, inked by the post pass)
-    const puffs = [];
-    const puffGeo = new T.SphereGeometry(1, 12, 8);
-    const puffMat = CL.Ink.ink('#FFFFFF', { shadeMin: 0.86, hatch: 0.1, lit: true });
-    function puff(x, y, z, vx, vy, vz, size, life) {
-      const m = new T.Mesh(puffGeo, puffMat);
-      m.position.set(x, y, z);
-      m.scale.setScalar(0.001);
-      world.scene.add(m);
-      puffs.push({ m, v: new T.Vector3(vx, vy, vz), size, life, t: 0 });
-    }
-    function burst(x, y, z, n, spread, size) {
-      for (let i = 0; i < n; i++) {
-        const a = Math.random() * PI * 2;
-        puff(x, y, z, Math.cos(a) * spread * Math.random(), 0.3 + Math.random() * spread * 0.6, Math.sin(a) * spread * Math.random() + spread * 0.4, size * (0.6 + Math.random() * 0.6), 1.0 + Math.random() * 0.6);
-      }
-    }
+    const { puff, burst } = api.fx;
 
-    // ---------------------------------------------------- helpers
-    const dist2 = (a, x, z) => Math.hypot(a.x - x, a.z - z);
-    const perched = a => a.support && a.support.kind !== 'floor' && a.support.kind !== 'pod';
-    const inPod = a => a.support && a.support.kind === 'pod';
-
-    async function turnWheel(a, wheelObj, turns, axis) {
-      play('creak');
-      a.armR = 1.2; a.armL = 1.0;
-      const r0 = wheelObj.rotation[axis || 'z'];
-      await new Promise(res => world.tween(0.9, u => {
-        wheelObj.rotation[axis || 'z'] = r0 - turns * 2 * PI * u;
-        a.armR = 1.0 + 0.4 * Math.sin(u * PI * 4);
-      }, res, CL.Engine.ease));
-      a.armR = 0; a.armL = 0;
-    }
+    // ---------------------------------------------------- what the Clawds can do (shared with every chapter)
+    const M = CL.Moves.setup(world, A, {
+      locked: a => {
+        if (a === A.haiku && !S.haikuFree) { world.bubble(a, S.wheelOn ? 'zz' : 'eye'); return; }
+        world.bubble(a, a === A.sonnet && !S.thawed ? 'frost' : 'zz');
+      },
+    });
+    const { dist2, perched, inPod, dismount, moveTo, climbOnto, turnWheel, operate } = M;
 
     function openDoor(pd, phi) {
       play('burst');
@@ -167,178 +106,27 @@
       a.face(0);
     }
 
-    // hop down from a crate or another Clawd onto the floor, towards (x, z)
-    async function dismount(a, x, z) {
-      const dx = x - a.x, dz = z - a.z, d = Math.hypot(dx, dz) || 1;
-      const off = 0.5 + (a.support.kind === 'crate' ? 0.45 : a.support.actor.spec.W * 0.4);
-      const [fx, fz] = grid.nearestFree(a.x + dx / d * off, a.z + dz / d * off);
-      if (a.support.kind === 'actor') a.support.actor.carrying = null;
-      if (a.support.kind === 'crate') L.crateRider = null;
-      a.support = null;
-      await a.hopTo(fx, fz, grid.heightAt(fx, fz), 0.4);
-    }
+    // ---------------------------------------------------- picks
+    M.floor(L.floor);
+    // the plinth top counts as floor
+    R.root.traverse(o => { if (o.isMesh && o.geometry && o.geometry.parameters && o.geometry.parameters.height === 0.52) M.floor(o, hit => [hit.point.x, Math.max(hit.point.z, 4.0)]); });
+    M.actors();
 
-    async function moveTo(a, x, z) {
-      if (!a) return;
-      if (inPod(a)) { world.bubble(a, 'lock'); return; }
-      const my = world.claim(a, () => moveTo(a, x, z));
-      if (my === null) return;
-      try {
-        if (perched(a)) {
-          if (a.carrying) { world.bubble(a, 'stack'); return; }
-          a.busy = true;
-          await dismount(a, x, z);
-        }
-        a.busy = 'walk';
-        const ok = await a.walkTo(x, z);
-        if (a.cmd !== my) return;
-        if (!ok) world.bubble(a, 'q');
-      } finally { world.release(a, my); }
-    }
-
-    // climb onto another Clawd (only onto a bigger one)
-    async function climbOnto(a, base) {
-      if (inPod(a)) return;
-      if (!base.free) { world.bubble(a, 'q'); return; }
-      if (base.carrying && base.carrying !== a) { world.bubble(a, 'q'); return; }
-      if (a.carrying) { world.bubble(a, 'stack'); return; }
-      if (a.spec.W >= base.spec.W) { world.bubble(base, 'heavy'); base.sq = 0.82; world.tween(0.3, u => { base.sq = 0.82 + 0.18 * u; }); return; }
-      const my = world.claim(a, () => climbOnto(a, base));
-      if (my === null) return;
-      try {
-        a.busy = true;
-        if (perched(a) && dist2(a, base.x, base.z) > 1.5) await dismount(a, base.x, base.z);
-        if (!perched(a) && dist2(a, base.x, base.z) > base.spec.W * 0.5 + 0.7) {
-          const d = dist2(a, base.x, base.z) || 1;
-          const r = base.spec.W * 0.5 + 0.45;
-          const [sx, sz] = grid.nearestFree(base.x + (a.x - base.x) / d * r, base.z + (a.z - base.z) / d * r);
-          a.busy = 'walk';
-          const ok = await a.walkTo(sx, sz);
-          if (a.cmd !== my) return;
-          a.busy = true;
-          if (!ok) { world.bubble(a, 'q'); return; }
-        }
-        if (base.topY - a.y > 1.8) { world.bubble(a, 'up'); return; }
-        await a.hopTo(base.x, base.z, base.topY, 0.5);
-        a.support = { kind: 'actor', actor: base };
-        base.carrying = a;
-        a.face(base.heading);
-        play('step');
-      } finally { world.release(a, my); }
-    }
-
-    // crate: push from a side (Opus only), or climb on top
+    // the caster crate: anything in the room it can't roll through
     const crateObstacles = [
-      [0, 0, LV.RW, 0.35], [0, LV.RD - 0.35, LV.RW, LV.RD], [0, 0, 0.35, LV.RD], [LV.RW - 0.35, 0, LV.RW, LV.RD],
       [LV.LOCKER.x - 0.3, LV.LOCKER.z - 0.55, LV.LOCKER.x + 0.3, LV.LOCKER.z + 0.55],
       [LV.COL_X - 0.42, 0, LV.COL_X + 0.42, 0.5], [0, 1.8, 1.0, 4.75], [LV.RX - 4.15, 0, LV.RX + 4.15, 4.4],
       [14.45, 7.5, 15.35, 9.35], [13.0, 8.7, 13.8, 9.5],
     ];
-    // skip: an actor to ignore (the one moving the crate), or true to ignore all of them
-    function crateFits(x, z, skip) {
-      const h = 0.45;
-      for (const [x0, z0, x1, z1] of crateObstacles) if (x + h > x0 && x - h < x1 && z + h > z0 && z - h < z1) return false;
-      for (const c of Object.values(LV.PODS)) if (Math.hypot(x - c.x, z - c.z) < 0.98 * c.k + 0.5) return false;
-      if (skip !== true) for (const a of Object.values(A)) if (a !== skip && !inPod(a) && !perched(a) && Math.abs(a.x - x) < h + 0.3 && Math.abs(a.z - z) < h + 0.3) return false;
-      return true;
-    }
-
-    async function pushCrate(a, n) {
-      if (inPod(a)) return;
-      if (!a.spec.heavy) { world.bubble(a, 'heavy'); return; }
-      if (L.crateRider) { world.bubble(a, 'q'); return; }
-      const my = world.claim(a, () => pushCrate(a, n));
-      if (my === null) return;
-      const c = L.crate;
-      const dir = Math.abs(n.x) > Math.abs(n.z) ? [-Math.sign(n.x), 0] : [0, -Math.sign(n.z)];
-      try {
-        const sx = c.position.x - dir[0] * 1.05, sz = c.position.z - dir[1] * 1.05;
-        a.busy = true;
-        if (perched(a)) await dismount(a, sx, sz);
-        L.crateBlock.on = false;
-        a.busy = 'walk';
-        const ok = await a.walkTo(sx, sz);
-        L.crateBlock.on = true;
-        if (a.cmd !== my) return;
-        a.busy = true;
-        if (!ok) { world.bubble(a, 'q'); return; }
-        a.face(Math.atan2(dir[0], dir[1]));
-        await world.wait(0.15);
-        // push it away; if that way is blocked, pull it back instead (so it can never get stuck against a wall)
-        let k = 1;
-        if (!crateFits(c.position.x + dir[0], c.position.z + dir[1], a)) {
-          k = -1;
-          if (!grid.freeAt(c.position.x - dir[0] * 2.05, c.position.z - dir[1] * 2.05) || !crateFits(c.position.x - dir[0], c.position.z - dir[1], a)) {
-            play('dull'); a.sq = 0.9; world.tween(0.25, u => { a.sq = 0.9 + 0.1 * u; }); world.bubble(a, 'heavy'); return;
-          }
-        }
-        play('whoosh');
-        const x0 = c.position.x, z0 = c.position.z, ax = a.x, az = a.z;
-        a.armL = a.armR = k > 0 ? 0.4 : 1.1;
-        L.crateBlock.on = false;
-        await new Promise(res => world.tween(k > 0 ? 0.4 : 0.6, u => {
-          c.position.x = x0 + dir[0] * u * k; c.position.z = z0 + dir[1] * u * k;
-          a.x = ax + dir[0] * u * k * (k > 0 ? 0.8 : 1); a.z = az + dir[1] * u * k * (k > 0 ? 0.8 : 1);
-          a.walk += 0.3 * k; a.amp = 1;
-        }, res, CL.Engine.ease));
-        a.armL = a.armR = 0;
-        L.crateBlock.x = c.position.x; L.crateBlock.z = c.position.z; L.crateBlock.on = true;
-        play('clunk');
-      } finally { world.release(a, my); }
-    }
-
-    async function climbCrate(a) {
-      if (inPod(a)) return;
-      const c = L.crate;
-      if (L.crateRider) { if (L.crateRider !== a) climbOnto(a, L.crateRider); return; }
-      const my = world.claim(a, () => climbCrate(a));
-      if (my === null) return;
-      try {
-        a.busy = true;
-        if (perched(a)) { if (a.carrying) { world.bubble(a, 'stack'); return; } await dismount(a, c.position.x, c.position.z); }
-        if (dist2(a, c.position.x, c.position.z) > 1.15) {
-          const d = dist2(a, c.position.x, c.position.z) || 1;
-          L.crateBlock.on = true;
-          const [sx, sz] = grid.nearestFree(c.position.x + (a.x - c.position.x) / d * 1.0, c.position.z + (a.z - c.position.z) / d * 1.0);
-          a.busy = 'walk';
-          const ok = await a.walkTo(sx, sz);
-          if (a.cmd !== my) return;
-          a.busy = true;
-          if (!ok) { world.bubble(a, 'q'); return; }
-        }
-        await a.hopTo(c.position.x, c.position.z, 0.9, 0.5);
-        a.support = { kind: 'crate' };
-        L.crateRider = a;
-        play('step');
-      } finally { world.release(a, my); }
-    }
-
-    // the base of a stack walks; whoever stands on it rides along (handled in Actor.update)
-    world.dismount = dismount;
-    world.isPerched = perched;
-
-    // ---------------------------------------------------- picks
-
-    // floor
-    world.addPick(L.floor, { kind: 'floor', onClick: (hit, a) => { if (a) moveTo(a, hit.point.x, hit.point.z); } });
-    // plinth top counts as floor
-    R.root.traverse(o => { if (o.isMesh && o.geometry && o.geometry.parameters && o.geometry.parameters.height === 0.52) world.addPick(o, { kind: 'floor', onClick: (hit, a) => { if (a) moveTo(a, hit.point.x, Math.max(hit.point.z, 4.0)); } }); });
-
-    // the Clawds themselves: click a side to select, click a head to climb on
-    Object.values(A).forEach(a => {
-      world.addPick(a.root, {
-        kind: 'actor', noGlow: true,
-        onClick: (hit, act) => {
-          if (!a.free) {
-            if (a === A.haiku && !S.haikuFree) { world.bubble(a, S.wheelOn ? 'zz' : 'eye'); return; }
-            world.bubble(a, a === A.sonnet && !S.thawed ? 'frost' : 'zz');
-            return;
-          }
-          if (act && act !== a && act.free && hit.normal.y > 0.6) climbOnto(act, a);
-          else world.select(a);
-        },
-      });
+    const crate = M.pushable(L.crate, {
+      fits: (x, z) => {
+        const h = 0.45;
+        for (const [x0, z0, x1, z1] of crateObstacles) if (x + h > x0 && x - h < x1 && z + h > z0 && z - h < z1) return false;
+        for (const c of Object.values(LV.PODS)) if (Math.hypot(x - c.x, z - c.z) < 0.98 * c.k + 0.5) return false;
+        return true;
+      },
     });
+
 
     // Opus pod: frost (drag to wipe) and the wheel, from the inside
     const op = L.pods.opus;
@@ -502,23 +290,8 @@
     });
 
     // crate
-    world.addPick(L.crate, {
-      kind: 'crate',
-      onClick: (hit, a) => {
-        if (!a) return;
-        if (hit.normal.y > 0.6) climbCrate(a);
-        else pushCrate(a, hit.normal);
-      },
-    });
-
     // valve block + main valve. The valves only change state here; onUpdate moves the
     // levers and the stem to match, so what you see is always what the pipes do.
-    async function operate(a, dur) {
-      play('creak');
-      a.armR = 1.2; a.armL = 1.0;
-      await new Promise(res => world.tween(dur, u => { a.armR = 1.0 + 0.4 * Math.sin(u * PI * 4); }, res));
-      a.armR = 0; a.armL = 0;
-    }
     Object.values(L.valves).forEach(v => {
       world.addPick([v.lever, v.body], {
         kind: 'valve',
@@ -646,18 +419,6 @@
         A.sonnet.armR = 0.3 + 0.15 * Math.sin(t * 23 + 1);
         screenGlow.material.opacity = 0.5 + 0.2 * Math.sin(t * 13);
       }
-      // steam puffs
-      for (let i = puffs.length - 1; i >= 0; i--) {
-        const p = puffs[i];
-        p.t += dt;
-        const u = p.t / p.life;
-        p.m.position.addScaledVector(p.v, dt);
-        p.v.multiplyScalar(1 - dt * 1.5);
-        p.v.y += dt * 0.4;
-        const s = p.size * Math.min(1, p.t / 0.18) * (1 - Math.max(0, (u - 0.55) / 0.45));
-        p.m.scale.setScalar(Math.max(0.001, s));
-        if (u >= 1) { world.scene.remove(p.m); puffs.splice(i, 1); }
-      }
       if (S.onFrame) S.onFrame(dt, t);
     };
 
@@ -767,8 +528,7 @@
       alarmOn = false;
       await world.wait(0.25);
       await new Promise(res => world.tween(0.5, u => { pipe.uFade.value = u; }, res));
-      document.getElementById('card').hidden = false;
-      setTimeout(() => { document.getElementById('again').hidden = false; }, 1200);
+      api.finish();
     }
 
     function tapRing(x, y) {
@@ -817,7 +577,11 @@
     }
 
     const game = {
-      S, A, L, crateFits,
+      S, A, L, crateFits: (x, z, skip) => crate.fits(x, z, skip),
+      probe: {
+        crate: () => [crate.mesh.position.x, crate.mesh.position.z],
+        valves: () => Object.fromEntries(Object.entries(L.valves).map(([k, v]) => [k, v.open])),
+      },
       begin() {
         frameRoom();
         world.rig.target.set(op.x + 0.2, 1.5, op.z + 0.6);
@@ -825,19 +589,14 @@
         world.rig.az = world.rig.azT = 20;
         world.select(A.opus);
         world.rig.follow = null;
-        document.getElementById('hud-tl').hidden = false;
-        document.getElementById('who').hidden = false;
-        document.getElementById('hud-br').hidden = false;
-        refreshHud();
+        hud.show();
         // after the first exit the camera settles into the 35-degree diorama view
         const iv = setInterval(() => { if (S.opusOut) { world.rig.azT = 35; clearInterval(iv); } }, 200);
       },
       // posed stills for screenshots
       async look(name) {
         frameRoom();
-        document.getElementById('hud-tl').hidden = false;
-        document.getElementById('who').hidden = false;
-        document.getElementById('hud-br').hidden = false;
+        hud.show();
         const wakeAll = () => {
           S.opusOut = S.thawed = S.sonnetFree = S.haikuFree = S.wheelOn = true;
           ['opus', 'sonnet', 'haiku'].forEach(n => { L.pods[n].hinge.rotation.y = -2.0; });
@@ -883,10 +642,9 @@
           world.rig.az = world.rig.azT = 35;
         } else if (name === 'locker') {
           wakeAll();
-          L.crate.position.set(1.3, 0.45, 6.0);
-          L.crateBlock.x = 1.3; L.crateBlock.z = 6.0;
-          A.opus.place(1.3, 6.0, 0.9, -PI / 2);
-          A.opus.support = { kind: 'crate' }; L.crateRider = A.opus;
+          crate.setAt(1.3, 6.0);
+          A.opus.heading = -PI / 2;
+          crate.seat(A.opus);
           A.sonnet.place(1.3, 6.0, 0.9 + A.opus.height, -PI / 2);
           A.sonnet.support = { kind: 'actor', actor: A.opus }; A.opus.carrying = A.sonnet;
           A.sonnet.armR = 1.5;
@@ -943,4 +701,5 @@
   }
 
   CL.Play0 = { setup };
+  CL.Chapters.define('prologue', { build: CL.Level0.build, setup });
 })(window.CL = window.CL || {});

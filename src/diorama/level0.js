@@ -29,14 +29,12 @@
   const { ink } = CL.Ink;
   const PI = Math.PI;
 
-  const RW = 16, RD = 10, WALL_H = 9.5;
+  const { RW, RD, WALL_H, RX, COL_X } = CL.Room;
   const PODS = {
     opus: { x: 1.5, z: 1.15, k: 1.0, label: 'OPUS 5.5' },
     sonnet: { x: 3.85, z: 0.95, k: 0.78, label: 'SONNET 5.5' },
     haiku: { x: 5.85, z: 0.75, k: 0.56, label: 'HAIKU 5.5' },
   };
-  const RX = 11.2;                       // reactor centre
-  const COL_X = 7.05;                    // column between the bay and containment
   const VALVE_Y = 0.9;                   // the three branch valves sit in a row on the left wall
   const VALVE_X = 0.65;
   const VALVES = [                       // which pod each one feeds (the pipes say so, nothing else does)
@@ -50,59 +48,8 @@
 
   function build(world) {
     const scene = world.scene;
-    const L = {};   // everything the logic needs
-
-    // ---------------------------------------------------- base, floor, walls
-    scene.add(K.box(RW + 0.6, 0.5, RD + 0.6, P.NAVY_DARK, RW / 2, -0.25, RD / 2));
-    const ft = TX.floorTile().clone();
-    ft.needsUpdate = true;
-    ft.wrapS = ft.wrapT = T.RepeatWrapping;
-    ft.repeat.set(RW / 1.8, RD / 1.8);
-    const floor = K.mesh(new T.PlaneGeometry(RW, RD), ink('#FFFFFF', { map: ft, hatch: 0.05, shadeMin: 0.92 }), RW / 2, 0.001, RD / 2);
-    floor.rotation.x = -PI / 2;
-    scene.add(floor);
-    L.floor = floor;
-    // safety lines
-    scene.add(K.box(RW - 0.6, 0.004, 0.07, P.SAFETY, RW / 2, 0.004, 0.42, { flat: true }));
-    scene.add(K.box(0.07, 0.004, RD - 0.6, P.SAFETY, 0.42, 0.004, RD / 2, { flat: true }));
-
-    function wall(len, normal) {
-      const g = new T.Group();
-      const t = TX.wallPanel(false).clone();
-      t.needsUpdate = true;
-      t.wrapS = t.wrapT = T.RepeatWrapping;
-      t.repeat.set(len / 2.4, WALL_H / 2.4);
-      const face = K.mesh(new T.PlaneGeometry(len, WALL_H), ink('#FFFFFF', { map: t, hatch: 0.08 }), len / 2, WALL_H / 2, 0);
-      g.add(face);
-      g.add(K.box(len, 0.18, 0.08, P.NAVY, len / 2, 0.07, 0.04));
-      g.add(K.box(len + 0.3, 0.14, 0.3, P.NAVY_DARK, len / 2, WALL_H + 0.07, -0.15));
-      g.add(K.box(len + 0.3, WALL_H, 0.3, P.WALL_SHADE, len / 2, WALL_H / 2, -0.15 - 0.001));
-      world.addWall(g, normal);
-      return g;
-    }
-    const back = wall(RW, new T.Vector3(0, 0, 1));
-    const left = wall(RD, new T.Vector3(1, 0, 0));
-    left.rotation.y = PI / 2;
-    left.position.set(0, 0, RD);
-    const front = wall(RW, new T.Vector3(0, 0, -1));
-    front.rotation.y = PI;
-    front.position.set(RW, 0, RD);
-    const right = wall(RD, new T.Vector3(-1, 0, 0));
-    right.rotation.y = -PI / 2;
-    right.position.set(RW, 0, 0);
-    L.walls = { back, left, front, right };
-
-    // stencils
-    const cryo = K.decal(4.2, 0.7, TX.stencil('CRYO  BAY', 4.2, 0.7), { useAlpha: true });
-    cryo.position.set(3.6, 5.7, 0.02);
-    back.add(cryo);
-    const cont = K.decal(6.0, 0.9, TX.stencil('CONTAINMENT', 6.0, 0.9), { useAlpha: true });
-    cont.position.set(5.0, 6.4, 0.02);
-    right.add(cont);
-
-    // column between the bay and containment
-    back.add(K.box(0.64, WALL_H, 0.5, P.REACTOR, COL_X, WALL_H / 2, 0.25));
-    back.add(K.box(0.84, 0.35, 0.6, P.NAVY, COL_X, 0.175, 0.3));
+    const L = CL.Room.build(world, { clock: [3, 12] });   // everything the logic needs
+    const { back, left } = L.walls;
 
     // ---------------------------------------------------- pods
     L.pods = {};
@@ -123,20 +70,6 @@
       pd.lamp = lp;
     });
 
-    // ---------------------------------------------------- reactor
-    const R = K.reactor();
-    R.root.position.set(RX, 0, 0);
-    scene.add(R.root);
-    L.reactor = R;
-    // two lamps over the reactor
-    L.reactorLamps = [RX - 2.6, RX + 2.6].map(x => {
-      const lp = K.lamp(false);
-      lp.position.set(x, 8.9, 4.2);
-      lp.scale.setScalar(1.4);
-      scene.add(lp);
-      return lp;
-    });
-
     // ---------------------------------------------------- steam pipes
     // Feed: out of the reactor, along the top of the back wall, down the corner,
     // along the left wall to a header with the main valve and three branch valves.
@@ -144,10 +77,7 @@
     // World coordinates; the back-wall runs hide with the back wall, the left-wall
     // runs with the left wall.
     const PR = 0.07;
-    const run = (parent, pts, r, col) => {
-      for (let i = 0; i < pts.length - 1; i++) parent.add(K.pipe(...pts[i], ...pts[i + 1], r || PR, col));
-      for (let i = 1; i < pts.length - 1; i++) parent.add(K.mesh(new T.SphereGeometry((r || PR) * 1.05, 10, 8), K.m(col || P.POD), ...pts[i]));
-    };
+    const run = CL.Room.run;
     const backPipes = new T.Group(), leftPipes = new T.Group();
     scene.add(backPipes, leftPipes);
     L.pipeGroups = { back: backPipes, left: leftPipes };
@@ -219,8 +149,8 @@
       lever.rotation.x = open ? 0 : PI / 2;
       L.valves[v.id] = Object.assign({ mesh: lever, body, lever, gauge: g, open, y: VALVE_Y }, v);
     });
-    back.userData.extra = [backPipes];
-    left.userData.extra = [leftPipes];
+    back.userData.extra.push(backPipes);
+    left.userData.extra.push(leftPipes);
 
     // ---------------------------------------------------- props on the floor
     const locker = new T.Group();
@@ -259,56 +189,13 @@
     scene.add(K.cyl(0.4, 0.4, 0.06, P.NAVY, 13.4, 0.98, 9.1, 20));
     L.clutter.push(barrel);
 
-    // wall clock (left wall) and the exit (right wall)
-    const clock = new T.Group();
-    clock.add(K.cyl(0.42, 0.42, 0.1, P.NAVY, 0, 0, 0, 24));
-    clock.children[0].rotation.x = PI / 2;
-    const cf = K.decal(0.8, 0.8, TX.clockFace(), { useAlpha: true });
-    cf.position.z = 0.06;
-    clock.add(cf);
-    const hh = K.box(0.04, 0.2, 0.02, P.INK, 0, 0.1, 0.08, { flat: true });
-    const mh = K.box(0.03, 0.3, 0.02, P.INK, 0, 0.15, 0.09, { flat: true });
-    const hg = new T.Group(); hg.add(hh); hg.position.z = 0; hg.rotation.z = -(3 + 12 / 60) / 12 * 2 * PI;
-    const mg = new T.Group(); mg.add(mh); mg.rotation.z = -12 / 60 * 2 * PI;
-    clock.add(hg, mg);
-    clock.position.set(4.0, 4.8, 0.06);
-    left.add(clock);
-    L.clock = { root: clock, hour: hg, minute: mg };
-
-    const exit = new T.Group();
-    exit.add(K.box(1.6, 2.6, 0.1, P.NAVY, 0, 1.3, 0.05));
-    exit.add(K.box(1.3, 2.4, 0.06, P.NAVY_LIGHT, 0, 1.2, 0.1));
-    exit.add(K.box(0.5, 0.36, 0.04, '#1B2A44', 0.0, 1.8, 0.14));
-    exit.add(K.box(0.08, 0.3, 0.08, P.BRASS, 0.5, 1.15, 0.16));
-    const es = K.decal(0.9, 0.3, TX.tex(TX.paint(0.9, 0.3, 256, g => {
-      g.fs(CL.gfx.rect(0, 0, 0.9, 0.3), P.CODE_GREEN, 1.0);
-      g.text('EXIT', 0.45, 0.08, 0.17, '#FFFFFF', 'slab');
-    })), { emissive: '#103018' });
-    es.position.set(0, 2.85, 0.06);
-    exit.add(es);
-    exit.position.set(6.6, 0, 0.0);
-    right.add(exit);
-    L.exit = exit;
-
-    // ---------------------------------------------------- walk grid
-    const G = new CL.Engine.Grid(RW, RD, 0.25);
-    world.grid = G;
-    G.blockRect(0, 0, RW, 0.35, 0);
-    G.blockRect(0, RD - 0.35, RW, RD, 0);
-    G.blockRect(0, 0, 0.35, RD, 0);
-    G.blockRect(RW - 0.35, 0, RW, RD, 0);
+    // ---------------------------------------------------- walk grid (the room already blocks walls and reactor)
+    const G = L.grid;
     Object.values(PODS).forEach(c => G.blockCircle(c.x, c.z, 0.98 * c.k));
-    G.blockRect(COL_X - 0.42, 0, COL_X + 0.42, 0.5);
-    G.blockRect(RX - 3.3, 0, RX + 3.3, 3.4);
     G.blockRect(0, 1.8, 1.0, 4.75, 0.2);
-    G.blockRect(RX + 3.3, 2.2, RX + 3.65, 3.0, 0.2);
-    G.blockRect(RX - 4.15, 3.4, RX + 4.15, 3.85, 0);
-    G.height(RX - 4.15, 3.85, RX + 4.15, 4.4, 0.56);
     G.blockRect(LOCKER.x - 0.3, LOCKER.z - 0.55, LOCKER.x + 0.3, LOCKER.z + 0.55);
     G.blockRect(14.45, 7.5, 15.35, 9.35);
     G.blockCircle(13.4, 9.1, 0.38);
-    L.crateBlock = { x: CRATE0[0], z: CRATE0[1], hw: 0.45, hd: 0.45, on: true };
-    G.dyn.push(L.crateBlock);
 
     return L;
   }

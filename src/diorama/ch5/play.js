@@ -138,6 +138,15 @@
     // shared, so the blocker asks who is planning the walk.
     const alley = { x: 15.25, z: POS.barrierZ, hw: 0.55, hd: 0.0, get on() { return grid.walker !== A.haiku; } };
     grid.dyn.push(alley);
+    // sent into the alley, the big ones walk up to the pipes and say why they stop there
+    const floorPick = L.floor.userData.pick, floorClick = floorPick.onClick;
+    floorPick.onClick = (hit, a) => {
+      if (a && a !== A.haiku && hit.point.x > 14.6 && hit.point.z < POS.barrierZ + 0.2) {
+        world.interact({ spot: () => [15.25, 2.6, PI], use: async a2 => world.bubble(a2, 'small') }, null, a);
+        return;
+      }
+      floorClick(hit, a);
+    };
     Object.values(A).forEach(a => {
       const base = a.walkTo.bind(a);
       a.walkTo = (x, z) => { grid.walker = a; try { return base(x, z); } finally { grid.walker = null; } };
@@ -1303,6 +1312,8 @@
           fogSt.density = 0.15; fogSt.picture = 0; C5.fog.redraw();
           fable.open = 0.15;
           L.clock.set(3, 12);
+          hud = api.hud({ todo: AR.TOMORROW, actors: A });
+          Object.values(A).forEach(b => { b.free = false; });
           cam(3.4, 1.8, 3.6, 10.5, 35);
         }
         rig.follow = null;

@@ -35,7 +35,6 @@
   const RX = CL.Room.RX;
   const snd = n => CL.Ch5Sound.play(n);
   const now = () => performance.now() / 1000;
-  const FAST = new URLSearchParams(location.search).has('fast');
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
   const TODO = ['Compare to blueprint', 'Test every change', 'Ask Fable 5.5 why', 'Lights out'];
@@ -632,19 +631,11 @@
     dataPort(C5.sealPort, 'seal', [13.25, 4.1, PI], 'bolt', () => ({ loose: !S.bolt }));
 
     // ---------------------------------------------------- the glass, the sign, other bits
-    let firstClick = true, skip = false;
-    world.on('click', hit => {
-      // Test hook: tools/playtest-flow.mjs only checks the chapter hand-over, so with
-      // ?fast=1 a first click straight on the porthole ends the chapter at once.
-      if (firstClick && FAST && hit.info.kind === 'glass') skip = true;
-      firstClick = false;
-    });
     world.addPick([R.glass, C5.fogMesh], {
       kind: 'glass',
       onClick: () => {
         const a = world.active;
         if (!a) return;
-        if (skip) { if (!S.ended) { S.ended = true; api.finish(); } return; }
         if (S.phase === 'when') {
           if (a === A.opus) { world.interact({ spot: () => [RX, 4.1, PI], use: answer }, null, a); return; }
           world.bubble(a, a === A.haiku && perched(a) ? 'ch5-list' : 'q');
@@ -1199,6 +1190,8 @@
     const game = {
       S, A, L,
       probe: {
+        // ends the chapter at once, for tools/playtest-flow.mjs (the chapter itself is played in playtest-ch5.mjs)
+        finish: () => { if (!S.ended) { S.ended = true; api.finish(); } },
         crate: () => [crate.mesh.position.x, crate.mesh.position.z],
         locked: () => world.locked,
         wheelAt: () => { const p = wpos(hp.wheel); return [p.x, p.y, p.z]; },

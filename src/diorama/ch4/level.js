@@ -529,6 +529,7 @@
     const valves = VALVES_X.map(x => {
       still.add(K.cyl(0.035, 0.04, 0.09, P.BRASS, x, VALVE.y - 0.045, VALVE.z, 10));
       const wh = K.wheel(0.065);
+      A4.mergeStatic(wh, []);
       wh.rotation.x = -PI / 2;
       wh.position.set(x, VALVE.y, VALVE.z);
       still.add(wh);
@@ -578,6 +579,19 @@
     [[-0.32, -0.32], [0.32, -0.32], [-0.32, 0.32], [0.32, 0.32]].forEach(([dx, dz]) => crate.add(K.cyl(0.06, 0.06, 0.04, P.INK, dx, -0.45, dz, 8)));
     scene.add(crate);
     L.crate = crate;
+
+    // ---------------------------------------------------- the same clutter as on release night, in the far corner
+    L.clutter = [];
+    [[14.9, 8.9, 'LN₂'], [14.9, 7.95, 'TOOLS'], [14.95, 8.9, null]].forEach(([x, z, lab], i) => {
+      const c = K.crate(lab);
+      c.position.set(x, i === 2 ? 1.35 : 0.45, z);
+      scene.add(c);
+      L.clutter.push(c);
+    });
+    const barrel = K.cyl(0.38, 0.38, 1.0, P.WHEEL_RED, 13.4, 0.5, 9.1, 20);
+    scene.add(barrel);
+    scene.add(K.cyl(0.4, 0.4, 0.06, P.NAVY, 13.4, 0.98, 9.1, 20));
+    L.clutter.push(barrel);
 
     // ---------------------------------------------------- Opus's desk and lamp
     const desk = new T.Group();
@@ -633,6 +647,21 @@
     G.blockRect(DRAIN.x - 0.08, TANK.z1, DRAIN.x + 0.08, DRAIN.z + 0.06, 0.12);
     G.blockRect(STILL.x0, STILL.z0, STILL.x1, STILL.z1);
     G.blockRect(DESK.x0, DESK.z0, DESK.x1, DESK.z1);
+    G.blockRect(14.45, 7.5, 15.35, 9.35);
+    G.blockCircle(13.4, 9.1, 0.38);
+
+    // fewer draw calls: merge what never moves (picks are registered later, in play.js)
+    const T0 = L.tank, C0 = L.console, S0 = L.still;
+    A4.mergeStatic(T0.root, [T0.water, T0.men, ...T0.panes, T0.scale, T0.gauge, T0.glow, T0.plaque, ...L.weeds, ...L.bubbles.map(b => b.m)]);
+    A4.mergeStatic(C0.root, [C0.plateG, ...C0.tubes.flatMap(t => [t.glass, t.column, t.collar]), C0.board, C0.bell, C0.songLabel]);
+    A4.mergeStatic(S0.root, [...S0.doors, S0.lock, ...S0.flames, S0.knob, S0.dial, S0.thermo, S0.boiler, S0.jar, ...S0.valves.flatMap(v => [v.wheel, v.stem])]);
+    Object.values(L.pods).forEach(pd => { A4.mergeStatic(pd.wheel, []); A4.mergeStatic(pd.root, [pd.hinge, pd.gauge, pd.tape]); });
+    A4.mergeStatic(L.inlet.group, [L.inlet.body, L.inlet.lever, L.trench.flow, ...L.trench.wet]);
+    A4.mergeStatic(L.hatch.root, [L.hatch.flapH, L.hatch.dial]);
+    A4.mergeStatic(L.shelf, []);
+    A4.mergeStatic(L.desk.root, [L.desk.lamp, L.desk.notebook]);
+    A4.mergeStatic(L.stand.root, [L.stand.glass, L.stand.water]);
+    A4.mergeStatic(L.whale.body, [L.whale.jaw, L.whale.tail, ...L.whale.eyes]);
 
     world.rig.bounds = [2.2, 11.5, 3.2, 7.4];
     world.rig.zoomMin = 6;

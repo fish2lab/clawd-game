@@ -50,7 +50,7 @@
       keyDown: false, keyTaken: false, holder: null, stillOpen: false,
       sT: 1, valves: [0, 0, 0, 0, 0], plugged: false, plugs: 0,
       crawling: false, haikuIn: false, distilling: false, prog: 0, runs: 0, distillQ: 0, distilled: false, ended: false,
-      saidFirst: false, lampOn: true,
+      lampOn: true,
     };
     const A = {
       opus: world.addActor('opus'),
@@ -102,7 +102,7 @@
     const { puff, burst } = api.fx;
 
     const M = CL.Moves.setup(world, A, { locked: a => world.bubble(a, 'zz') });
-    const { dist2, perched, operate, turnWheel } = M;
+    const { perched, operate, turnWheel } = M;
     M.floor(L.floor);
     R.root.traverse(o => { if (o.isMesh && o.geometry && o.geometry.parameters && o.geometry.parameters.height === 0.52) M.floor(o, hit => [hit.point.x, Math.max(hit.point.z, 4.0)]); });
     M.actors();
@@ -641,6 +641,7 @@
       } }),
     });
     info(L.desk.notebook, 'note');
+    info(L.clutter, 'clutter', a => world.bubble(a, 'heavy'));
 
     // ---------------------------------------------------- per frame
     const crawlFix = () => { const h = A.haiku; h.root.visible = !U.hidden; if (U.hidden) h.shadow.visible = false; };

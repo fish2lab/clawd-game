@@ -337,7 +337,61 @@
     return sp;
   }
 
+  // ------------------------------------------------------------ draw-call diet
+
+  // Merge the static meshes under root that share a material (and layer) into one mesh each,
+  // leaving alone everything under the objects in keep (they move, change or are picked on
+  // their own). Software GL pays per draw call, twice (colour + ink pass). Call before picks.
+  function mergeStatic(root, keep) {
+    root.updateMatrixWorld(true);
+    const inv = new T.Matrix4().copy(root.matrixWorld).invert();
+    const skip = new Set();
+    (keep || []).forEach(o => { if (o) o.traverse(m => skip.add(m)); });
+    const buckets = new Map();
+    root.traverse(m => {
+      if (!m.isMesh || skip.has(m) || Array.isArray(m.material) || m.renderOrder || !m.visible) return;
+      let vis = true;
+      for (let o = m.parent; o && o !== root; o = o.parent) if (!o.visible) vis = false;
+      if (!vis) return;
+      const key = m.material.uuid + '|' + m.layers.mask;
+      if (!buckets.has(key)) buckets.set(key, []);
+      buckets.get(key).push(m);
+    });
+    let saved = 0;
+    for (const list of buckets.values()) {
+      if (list.length < 2) continue;
+      const parts = list.map(m => {
+        const g = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone();
+        g.applyMatrix4(new T.Matrix4().multiplyMatrices(inv, m.matrixWorld));
+        if (!g.attributes.normal) g.computeVertexNormals();
+        return g;
+      });
+      const n = parts.reduce((a, g) => a + g.attributes.position.count, 0);
+      const pos = new Float32Array(n * 3), nor = new Float32Array(n * 3), uv = new Float32Array(n * 2);
+      let o = 0;
+      parts.forEach(g => {
+        const c = g.attributes.position.count;
+        pos.set(g.attributes.position.array, o * 3);
+        nor.set(g.attributes.normal.array, o * 3);
+        if (g.attributes.uv) uv.set(g.attributes.uv.array, o * 2);
+        o += c;
+        g.dispose();
+      });
+      const geo = new T.BufferGeometry();
+      geo.setAttribute('position', new T.BufferAttribute(pos, 3));
+      geo.setAttribute('normal', new T.BufferAttribute(nor, 3));
+      geo.setAttribute('uv', new T.BufferAttribute(uv, 2));
+      const mesh = new T.Mesh(geo, list[0].material);
+      mesh.layers.mask = list[0].layers.mask;
+      root.add(mesh);
+      list.forEach(m => m.parent.remove(m));
+      saved += list.length - 1;
+    }
+    return saved;
+  }
+
   CL.Ch4Art = {
+    mergeStatic,
     mixc, NO_GLOW, own, glowMat, onLayer1, whale, fish, levelScale, label, panelText, faderPlate, shutOpenFace, stemScale, tape, notebook,
     paintReadout, PICTS, registerIcons, speech,
   };

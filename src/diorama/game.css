@@ -86,3 +86,6 @@ body { font: 15px/1.5 var(--body); -webkit-user-select: none; user-select: none;
   .btn { width: 44px; height: 44px; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* `all: unset` and `display: flex` above outrank the UA [hidden] rule; keep hidden things hidden */
+[hidden], .screen button[hidden], .hud-tl[hidden], .hud-bl[hidden], .hud-br[hidden], .todo[hidden] { display: none !important; }
